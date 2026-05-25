@@ -1,0 +1,5 @@
+/* Resetting default styling: All premium styles are in index.css */
+.app-container {
+  display: flex;
+  flex-direction: column;
+}

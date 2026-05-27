@@ -1,1401 +1,1540 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Code as CodeIcon, 
-  Github as GithubIcon, 
-  Camera as CameraIcon, 
-  Mountain as MountainIcon, 
-  Music as MusicIcon, 
-  ChefHat as FoodIcon, 
-  TrendingUp as GrowthIcon, 
-  BookOpen as JourneyIcon,
-  Volume2, 
-  VolumeX, 
-  Play, 
-  Pause, 
-  SkipForward, 
-  X, 
-  Terminal, 
-  Flame, 
-  Target, 
-  Check, 
-  ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  RefreshCw,
-  Search,
-  Sparkles,
-  Sun,
-  Compass
-} from 'lucide-react';
-import audioHelper from './audioHelper';
-import './App.css';
+  profileData, 
+  codingData, 
+  photographyData, 
+  natureData, 
+  musicData, 
+  foodData, 
+  entrepreneurData 
+} from './mockData';
 
-// Mock Data for timeline
-const TIMELINE_DATA = {
-  2020: {
-    title: "The Awakening: First Hello World",
-    subtitle: "Entry into the Digital Universe",
-    desc: "Coded my first interactive application. Discovered a deep, burning passion for engineering, problem solving, and building digital art. Laid down the foundation of computer science fundamentals.",
-    achievement: "Mastered Python, JS basics & simple hardware hacks."
-  },
-  2022: {
-    title: "Graduation & Engineering Leap",
-    subtitle: "Diving into Enterprise Architecture",
-    desc: "Graduated with honors in Computer Science. Built and scaled complex full-stack web and mobile apps. Started contributing to major open-source web ecosystems and building scalable backends.",
-    achievement: "Developed 12 fully functional commercial systems."
-  },
-  2024: {
-    title: "The Entrepreneurial Shift",
-    subtitle: "Pioneering Tech & Food Innovation",
-    desc: "Co-founded a culinary tech startup. Integrated smart operations, inventory management algorithms, and digital interfaces, mixing the culinary art with high-tech software workflows.",
-    achievement: "Secured $150K initial funding, managed 10+ devs."
-  },
-  2026: {
-    title: "Mastering Ethereal Digital Spaces",
-    subtitle: "Building Today for a Better Tomorrow",
-    desc: "Synthesizing full human sensory digital portals. Merging sound design, GPU shaders, physics-based simulations, and sleek architectural layouts to forge the next wave of interactive media.",
-    achievement: "Creating fully custom audio-visual software installations."
-  }
-};
-
-// Culinary suggested dishes based on profile score
-const getCulinaryRecommendation = (sweet, savory, spicy, umami, acid) => {
-  const sum = sweet + savory + spicy + umami + acid;
-  if (sum === 0) return { name: "Symphony of Flavors", desc: "Balance your sliders to craft a recipe!" };
+export default function App() {
+  // ==========================================
+  // STATE MANAGEMENT
+  // ==========================================
+  const [booting, setBooting] = useState(true);
+  const [bootProgress, setBootProgress] = useState(0);
+  const [bootLogs, setBootLogs] = useState([]);
+  const [activeModal, setActiveModal] = useState(null);
+  const [currentTime, setCurrentTime] = useState("");
   
-  if (spicy >= 70 && umami >= 70) {
-    return { name: "Smoked Himalayan Truffle Chili Ramen", desc: "A fiery broth enriched with organic shiitake essence and cold-smoked black truffle paste, topped with fresh hand-pulled noodles." };
-  }
-  if (sweet >= 70 && acid >= 70) {
-    return { name: "Deconstructed Tangy Wildberry Pavlova", desc: "Crisp vanilla bean meringue shards with a sour lemon-verbena curd and a warm, wild mountain blackberry reduction." };
-  }
-  if (savory >= 70 && umami >= 70) {
-    return { name: "48-Hour Slow-Cooked Herb Glazed Ribeye", desc: "A robust cut slow-braised with rosemary, garlic confit, and red-wine reduction, served over a charred parsnip mousseline." };
-  }
-  if (acid >= 70 && savory >= 70) {
-    return { name: "Charred Coastal Seabass with Citrus Gremolata", desc: "Fresh flaky seabass seared in cast iron, drizzled with blood-orange emulsion and a micro-herb salsa verde." };
-  }
-  if (sweet >= 70 && savory >= 60) {
-    return { name: "Salted Caramel Apple Tarte Tatin", desc: "Caramelized Granny Smith apples inside a flaky puff pastry, served with flaky Fleur de Sel and bourbon vanilla ice cream." };
-  }
-  
-  // Default dynamic calculation
-  const primary = Object.entries({ sweet, savory, spicy, umami, acid })
-    .sort((a,b) => b[1] - a[1])[0][0];
-    
-  switch (primary) {
-    case 'spicy': return { name: "Szechuan Pepper Dust Octopus", desc: "Crisp tender baby octopus dry-rubbed with Szechuan peppercorns, bird's eye chili, and cilantro root." };
-    case 'sweet': return { name: "Cardamom Spiced Saffron Kulfi", desc: "Traditional slow-reduced Indian ice cream infused with hand-crushed green cardamom and organic Kashmiri saffron." };
-    case 'umami': return { name: "Pan-Seared Matsutake with Miso Glaze", desc: "Wild forest Matsutake mushrooms seared in brown butter, brushed with white miso and toasted sesame oil." };
-    case 'acid': return { name: "Yuzu Infused Salmon Ceviche", desc: "Cured salmon cubes marinated in fresh Japanese yuzu juice, green apple slices, red radish, and pickled ginger." };
-    default: return { name: "Artisanal Garden Herb Risotto", desc: "Creamy arborio rice simmered in vegetable stock, loaded with fresh tarragon, chervil, and aged Parmigiano Reggiano." };
-  }
-};
+  // Terminal IDE Simulator State
+  const [activeIDETab, setActiveIDETab] = useState(" सॉल्यूशन.cpp");
+  const [cliInput, setCliInput] = useState("");
+  const [cliLogs, setCliLogs] = useState([
+    { text: "System initialization completed.", type: "system" },
+    { text: "Type help to list available security commands.", type: "system" }
+  ]);
 
-function App() {
-  // Global states
-  const [audioActive, setAudioActive] = useState(false);
-  const [activeNode, setActiveNode] = useState(null);
-  const [activeCard, setActiveCard] = useState(null);
-  const [activeWidget, setActiveWidget] = useState(null); // 'leetcode' | 'focus' | null
-  
-  // Custom interactive sub-module states
-  // 1. Code IDE states
-  const [codeRunning, setCodeRunning] = useState(false);
-  const [codeConsole, setCodeConsole] = useState([]);
-  
-  // 2. GitHub Contributions Grid states
-  const [githubGrid, setGithubGrid] = useState(
-    Array.from({ length: 48 }, (_, i) => ({
-      id: i,
-      lvl: i === 0 ? 0 : Math.floor(Math.random() * 4), // random green level (0-3)
-      commits: Math.floor(Math.random() * 8)
-    }))
-  );
-  
-  // 3. Photography polaroids states
-  const [photoIndex, setPhotoIndex] = useState(0);
-  const photos = [
-    { title: "Rohtang Pass", desc: "Himalayas, 13,058 ft", gradient: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)" },
-    { title: "Silent Valley", desc: "Western Ghats", gradient: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)" },
-    { title: "Misty Sunrise", desc: "Wayand Hills", gradient: "linear-gradient(135deg, #e65c00 0%, #f9d423 100%)" },
-    { title: "Monsoon Flow", desc: "Athirappilly Cascade", gradient: "linear-gradient(135deg, #4b6cb7 0%, #182848 100%)" }
-  ];
+  // Photography State
+  const [cameraShutter, setCameraShutter] = useState(100);
+  const [cameraAperture, setCameraAperture] = useState(0);
+  const [cameraIso, setCameraIso] = useState(20);
+  const [activePhoto, setActivePhoto] = useState(photographyData.gallery[0]);
 
-  // 4. Nature states
-  const [windSpeed, setWindSpeed] = useState(15);
-  const [chimeAngles, setChimeAngles] = useState([0, 0, 0, 0, 0]);
+  // Nature State
+  const [breathingText, setBreathingText] = useState("INHALATION (4s)");
+  const [breathingScale, setBreathingScale] = useState(1.0);
+  const [natureMuted, setNatureMuted] = useState({ rain: false, river: false, wind: false, birds: false });
+  const [natureVolume, setNatureVolume] = useState({ rain: 65, river: 40, wind: 50, birds: 25 });
 
-  // 5. Music Player states
-  const [isPlayingSong, setIsPlayingSong] = useState(false);
-  const [songProgress, setSongProgress] = useState(30);
+  // Music State
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [musicProgress, setMusicProgress] = useState(0);
+  const [activeLyricIndex, setActiveLyricIndex] = useState(0);
 
-  // 6. Food states
-  const [tasteProfile, setTasteProfile] = useState({
-    sweet: 30,
-    savory: 75,
-    spicy: 40,
-    umami: 80,
-    acid: 20
-  });
+  // Food Branding Mixer State
+  const [selectedMixPills, setSelectedMixPills] = useState([]);
+  const [synthesizedConcept, setSynthesizedConcept] = useState("");
 
-  // 7. Growth compound slider states
-  const [monthlyInvest, setMonthlyInvest] = useState(500);
-  const [returnRate, setReturnRate] = useState(12);
-  const [compoundYears, setCompoundYears] = useState(15);
+  // Entrepreneur State
+  const [hoveredChartPoint, setHoveredChartPoint] = useState(null);
+  const [chartTooltipPos, setChartTooltipPos] = useState({ x: 0, y: 0 });
+  const [selectedMindNode, setSelectedMindNode] = useState(null);
 
-  // 8. Journey timeline states
-  const [selectedTimelineYear, setSelectedTimelineYear] = useState(2026);
+  // Refs for HTML5 Canvases
+  const natureCanvasRef = useRef(null);
+  const musicCanvasRef = useRef(null);
+  const growthCanvasRef = useRef(null);
+  const lyricsScrollerRef = useRef(null);
 
-  // Habit Tracker states
-  const [habitStreak, setHabitStreak] = useState(112);
-  const [checkedHabits, setCheckedHabits] = useState({
-    code: true,
-    read: false,
-    meditate: false
-  });
-
-  // References
-  const canvasRef = useRef(null);
-  const waveCanvasRef = useRef(null);
-  const waveAnimRef = useRef(null);
-
-  // Audio system toggler
-  const toggleAudio = () => {
-    const newState = !audioActive;
-    setAudioActive(newState);
-    audioHelper.setMute(!newState);
-  };
-
-  // Sound play helper on actions
-  const playSoundEffect = (type) => {
-    if (audioActive) {
-      audioHelper.playClick();
-    }
-  };
-
-  // Synthesize specific hover sound for nodes
-  const handleNodeHover = (nodeId) => {
-    setActiveNode(nodeId);
-    if (audioActive) {
-      audioHelper.playHover(nodeId);
-    }
-  };
-
-  // Visualizer bar animation (top right)
+  // ==========================================
+  // EFFECT 1: SYSTEM BOOT LOADER & TIMER IST
+  // ==========================================
   useEffect(() => {
-    if (audioActive) {
-      audioHelper.startAmbient();
-    }
-  }, [audioActive]);
-
-  // Rising embers and white foam particle engine
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let animationFrameId;
-
-    const handleResize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+    // 1. Live Clock IST (UTC+5:30)
+    const updateTime = () => {
+      const now = new Date();
+      const istTime = new Date(now.getTime() + (now.getTimezoneOffset() + 330) * 60000);
+      let hours = istTime.getHours();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const minutes = String(istTime.getMinutes()).padStart(2, '0');
+      const seconds = String(istTime.getSeconds()).padStart(2, '0');
+      setCurrentTime(`${hours}:${minutes}:${seconds} ${ampm} // UTC+5:30`);
     };
-    window.addEventListener('resize', handleResize);
-    handleResize();
+    updateTime();
+    const timeInterval = setInterval(updateTime, 1000);
 
-    // Embers rising from central rocks
-    const particles = [];
-    const particleCount = 45;
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: canvas.height + Math.random() * 200,
-        radius: 0.8 + Math.random() * 2,
-        speedY: -0.3 - Math.random() * 0.8,
-        speedX: Math.sin(Math.random() * Math.PI) * 0.15,
-        alpha: 0.1 + Math.random() * 0.45,
-        color: i % 3 === 0 ? '#d4af37' : i % 3 === 1 ? '#06b6d4' : '#a855f7' // gold, cyan, purple theme
-      });
-    }
+    // 2. Boot Logs simulation
+    const logs = [
+      "SYSTEM INITIATED // DEPLOYING GIRIDHAR_U_PORTFOLIO_OS",
+      "ESTABLISHING 3D MODULAR GRID COORDINATES...",
+      "LOADING ASSET: PHOTOGRAPHY_NATURE.PNG (SUNRISE FILM)... OK",
+      "LOADING ASSET: FOOD_LUXURY.PNG (CULINARY METADATA)... OK",
+      "MOUNTING ALGORITHMIC TERMINAL & INTERACTIVE CLI SYSTEMS...",
+      "SYNCHRONIZING AUDIO CHANNELS & VINYL EMULATORS...",
+      "PREPARING ENVIRONMENT SECTIONS (SAGE / SENSORY)... OK",
+      "GIRIDHAR PORTFOLIO OS IS ACTIVE."
+    ];
 
-    const render = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // White river foam splattering at bottom river area
-      if (Math.random() < 0.22) {
-        particles.push({
-          x: canvas.width * 0.35 + Math.random() * (canvas.width * 0.65),
-          y: canvas.height * 0.72 + Math.random() * (canvas.height * 0.28),
-          radius: 0.4 + Math.random() * 1.4,
-          speedY: -0.05 - Math.random() * 0.15,
-          speedX: -0.6 - Math.random() * 0.9, // flowing downstream leftwards
-          alpha: 0.1 + Math.random() * 0.3,
-          color: '#ffffff',
-          life: 80 + Math.random() * 40
-        });
+    let currentLog = 0;
+    const logInterval = setInterval(() => {
+      if (currentLog < logs.length) {
+        setBootLogs(prev => [...prev, logs[currentLog]]);
+        currentLog++;
       }
+    }, 280);
 
-      particles.forEach((p, index) => {
-        p.y += p.speedY;
-        p.x += p.speedX;
-
-        if (p.life !== undefined) {
-          p.life--;
-          p.alpha -= 0.0035;
-        }
-
-        // Loop regular particles
-        if (p.y < -10 && p.life === undefined) {
-          p.y = canvas.height + 20;
-          p.x = Math.random() * canvas.width;
-          p.alpha = 0.1 + Math.random() * 0.45;
-        }
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = Math.max(0, p.alpha);
-        ctx.fill();
-
-        // splice dead water foam
-        if (p.life <= 0) {
-          particles.splice(index, 1);
-        }
-      });
-
-      ctx.globalAlpha = 1.0;
-      animationFrameId = requestAnimationFrame(render);
-    };
-
-    render();
+    // 3. Boot Progress bar
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+      progress += Math.floor(Math.random() * 8) + 4;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(progressInterval);
+        clearInterval(logInterval);
+        setTimeout(() => {
+          setBooting(false);
+        }, 500);
+      }
+      setBootProgress(progress);
+    }, 120);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animationFrameId);
+      clearInterval(timeInterval);
+      clearInterval(logInterval);
+      clearInterval(progressInterval);
     };
   }, []);
 
-  // Music Visualizer Canvas rendering
+  // ==========================================
+  // EFFECT 2: BREATHING CYCLE CONTROLLER
+  // ==========================================
   useEffect(() => {
-    const canvas = waveCanvasRef.current;
-    if (!canvas) return;
+    if (booting) return;
+    const breathStates = [
+      { text: "INHALATION (4s)", scale: 2.2, duration: 4000 },
+      { text: "HOLD BREATH (4s)", scale: 2.2, duration: 4000 },
+      { text: "EXHALATION (4s)", scale: 1.0, duration: 4000 },
+      { text: "HOLD BREATH (4s)", scale: 1.0, duration: 4000 }
+    ];
+    let stateIdx = 0;
+
+    const runCycle = () => {
+      const current = breathStates[stateIdx];
+      setBreathingText(current.text);
+      setBreathingScale(current.scale);
+      
+      const timer = setTimeout(() => {
+        stateIdx = (stateIdx + 1) % breathStates.length;
+        runCycle();
+      }, current.duration);
+      
+      return timer;
+    };
+
+    const activeTimer = runCycle();
+    return () => clearTimeout(activeTimer);
+  }, [booting]);
+
+  // ==========================================
+  // EFFECT 3: MUSIC SLEEVE / TIMELINE MANAGER
+  // ==========================================
+  useEffect(() => {
+    if (!isMusicPlaying) return;
+
+    const musicInterval = setInterval(() => {
+      setMusicProgress(prev => {
+        const next = prev + 0.5;
+        if (next >= 100) {
+          setIsMusicPlaying(false);
+          clearInterval(musicInterval);
+          return 0;
+        }
+        
+        // Update Lyrics Index based on percentages
+        let activeIdx = 0;
+        if (next > 75) activeIdx = 4;
+        else if (next > 50) activeIdx = 3;
+        else if (next > 25) activeIdx = 2;
+        else if (next > 8) activeIdx = 1;
+        
+        setActiveLyricIndex(activeIdx);
+        
+        // Auto scroll lyrics container
+        if (lyricsScrollerRef.current) {
+          const lines = lyricsScrollerRef.current.children;
+          if (lines[activeIdx]) {
+            lyricsScrollerRef.current.scrollTop = lines[activeIdx].offsetTop - 45;
+          }
+        }
+
+        return next;
+      });
+    }, 100);
+
+    return () => clearInterval(musicInterval);
+  }, [isMusicPlaying]);
+
+  // ==========================================
+  // EFFECT 4: CANVAS RENDERERS (LEAF & WAVE & GROWTH)
+  // ==========================================
+  // A. Nature Leaf Canvas
+  useEffect(() => {
+    if (activeModal !== 'modal-nature' || !natureCanvasRef.current) return;
+    const canvas = natureCanvasRef.current;
     const ctx = canvas.getContext('2d');
-    let phase = 0;
+    const parent = canvas.parentElement;
+    canvas.width = parent.clientWidth;
+    canvas.height = parent.clientHeight;
 
-    const renderWave = () => {
+    const colors = ['#8ba888', '#5b8565', '#dfb15b', '#e07a5f'];
+    let leaves = Array.from({ length: 35 }, () => createLeaf(canvas));
+
+    function createLeaf(cv, fromTop = false) {
+      return {
+        x: Math.random() * cv.width,
+        y: fromTop ? -20 : Math.random() * cv.height,
+        size: Math.random() * 8 + 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        speedY: Math.random() * 0.8 + 0.4,
+        speedX: Math.random() * 1 - 0.5,
+        oscillation: Math.random() * 0.05,
+        angle: Math.random() * 360,
+        rotationSpeed: Math.random() * 2 - 1
+      };
+    }
+
+    let animationId;
+    const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      const width = canvas.width;
-      const height = canvas.height;
-      
-      ctx.strokeStyle = '#a855f7';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      
-      // Draw 3 layers of glowing mathematical waves
-      for (let i = 0; i < width; i++) {
-        // Amplitude fluctuates if playing
-        const amp1 = isPlayingSong ? 20 + Math.sin(phase * 2) * 8 : 4;
-        const freq1 = 0.015;
-        
-        const y = height / 2 + Math.sin(i * freq1 + phase) * amp1;
-        if (i === 0) ctx.moveTo(i, y);
-        else ctx.lineTo(i, y);
-      }
-      ctx.stroke();
+      leaves.forEach((l, idx) => {
+        l.y += l.speedY;
+        l.x += l.speedX + Math.sin(l.y * l.oscillation) * 0.3;
+        l.angle += l.rotationSpeed;
 
-      ctx.strokeStyle = 'rgba(6, 182, 212, 0.4)';
-      ctx.lineWidth = 1.0;
-      ctx.beginPath();
-      for (let i = 0; i < width; i++) {
-        const amp2 = isPlayingSong ? 12 + Math.cos(phase * 1.5) * 5 : 2;
-        const freq2 = 0.022;
-        const y = height / 2 + Math.sin(i * freq2 - phase * 1.2) * amp2;
-        if (i === 0) ctx.moveTo(i, y);
-        else ctx.lineTo(i, y);
-      }
-      ctx.stroke();
-      
-      phase += isPlayingSong ? 0.08 : 0.01;
-      waveAnimRef.current = requestAnimationFrame(renderWave);
-    };
+        ctx.save();
+        ctx.translate(l.x, l.y);
+        ctx.rotate((l.angle * Math.PI) / 180);
+        ctx.fillStyle = l.color;
+        ctx.globalAlpha = 0.65;
 
-    renderWave();
+        ctx.beginPath();
+        ctx.moveTo(0, -l.size);
+        ctx.quadraticCurveTo(l.size / 2, 0, 0, l.size);
+        ctx.quadraticCurveTo(-l.size / 2, 0, 0, -l.size);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
 
-    return () => {
-      if (waveAnimRef.current) cancelAnimationFrame(waveAnimRef.current);
-    };
-  }, [isPlayingSong]);
-
-  // Code IDE runner simulation logic
-  const runCodeSolution = () => {
-    if (codeRunning) return;
-    playSoundEffect();
-    setCodeRunning(true);
-    setCodeConsole(["[System] Running solution in Node Sandbox...", "[System] Loading Two-Sum test-suite..."]);
-    
-    setTimeout(() => {
-      setCodeConsole(prev => [...prev, "[Test Suite] Running Case #1: nums = [2,7,11,15], target = 9"]);
-    }, 800);
-    
-    setTimeout(() => {
-      setCodeConsole(prev => [...prev, "✔ SUCCESS: Case #1 Passed! Output: [0, 1]"]);
-    }, 1500);
-
-    setTimeout(() => {
-      setCodeConsole(prev => [...prev, "[Test Suite] Running Case #2: nums = [3,2,4], target = 6"]);
-    }, 2100);
-
-    setTimeout(() => {
-      setCodeConsole(prev => [
-        ...prev, 
-        "✔ SUCCESS: Case #2 Passed! Output: [1, 2]",
-        "",
-        "------------------------------------",
-        "STATUS: ALL TESTS COMPLETED SUCCESSFULLY!",
-        "Runtime: 16ms (Beats 99.2% of JS submissions)",
-        "Memory: 41.2 MB (Beats 95.8% of JS submissions)"
-      ]);
-      setCodeRunning(false);
-      if (audioActive) {
-        audioHelper.playClick();
-      }
-    }, 3000);
-  };
-
-  // GitHub grid contribution click action
-  const handleGithubCellClick = (cellId) => {
-    setGithubGrid(prev => prev.map(c => {
-      if (c.id === cellId) {
-        const nextLvl = (c.lvl + 1) % 5;
-        if (audioActive) {
-          // Play ascending scales depending on level clicked
-          audioHelper.playChime(nextLvl + 3);
+        if (l.y > canvas.height + 20) {
+          leaves[idx] = createLeaf(canvas, true);
         }
-        return {
-          ...c,
-          lvl: nextLvl,
-          commits: c.commits + 1
-        };
+      });
+      animationId = requestAnimationFrame(animate);
+    };
+
+    animate();
+    return () => cancelAnimationFrame(animationId);
+  }, [activeModal]);
+
+  // B. Music Waveform Canvas
+  useEffect(() => {
+    if (activeModal !== 'modal-music' || !musicCanvasRef.current) return;
+    const canvas = musicCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = 60;
+
+    let animationId;
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const count = 30;
+      const spacing = canvas.width / count;
+      ctx.fillStyle = '#ec4899';
+      ctx.globalAlpha = 0.75;
+
+      for (let i = 0; i < count; i++) {
+        let height = 0;
+        if (isMusicPlaying) {
+          height = Math.abs(Math.sin((Date.now() / 150) + i)) * 35 + 4;
+        } else {
+          height = Math.abs(Math.sin((Date.now() / 800) + i)) * 8 + 2;
+        }
+        const x = i * spacing + (spacing / 4);
+        const y = (canvas.height - height) / 2;
+
+        ctx.beginPath();
+        ctx.roundRect(x, y, spacing / 2, height, 4);
+        ctx.fill();
       }
-      return c;
+      animationId = requestAnimationFrame(draw);
+    };
+
+    draw();
+    return () => cancelAnimationFrame(animationId);
+  }, [activeModal, isMusicPlaying]);
+
+  // C. Growth Blueprint Valuations Canvas
+  useEffect(() => {
+    if (activeModal !== 'modal-mindset' || !growthCanvasRef.current) return;
+    const canvas = growthCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = 220;
+
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // Draw blueprint lines
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+    ctx.lineWidth = 1;
+
+    const xStep = w / 8;
+    for (let x = 0; x < w; x += xStep) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+
+    const yStep = h / 5;
+    for (let y = 0; y < h; y += yStep) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+
+    // Scale coordinates
+    const points = entrepreneurData.chartPoints.map(p => ({
+      x: (p.pctX / 100) * w,
+      y: (p.pctY / 100) * h,
+      label: p.label,
+      value: p.value
     }));
-  };
 
-  // Polaroid picture shuffle action
-  const shufflePhotos = () => {
-    playSoundEffect();
-    setPhotoIndex(prev => (prev + 1) % photos.length);
-    if (audioActive) {
-      // Synthesize DSLR shutter snap!
-      audioHelper.playHover('photography');
+    // Draw volumetric gradient fill
+    const fillGrad = ctx.createLinearGradient(0, 0, 0, h);
+    fillGrad.addColorStop(0, 'rgba(223, 177, 91, 0.22)');
+    fillGrad.addColorStop(1, 'rgba(223, 177, 91, 0)');
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, h);
+    ctx.lineTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      const xc = (points[i-1].x + points[i].x) / 2;
+      const yc = (points[i-1].y + points[i].y) / 2;
+      ctx.quadraticCurveTo(points[i-1].x, points[i-1].y, xc, yc);
     }
-  };
+    ctx.lineTo(points[points.length-1].x, points[points.length-1].y);
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fillStyle = fillGrad;
+    ctx.fill();
 
-  // Nature wind slider adjustments
-  const handleWindSlider = (e) => {
-    const val = parseInt(e.target.value);
-    setWindSpeed(val);
-    audioHelper.setWindSpeed(val);
-  };
+    // Draw trend stroke
+    ctx.strokeStyle = '#dfb15b';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = 'rgba(223, 177, 91, 0.4)';
+    ctx.shadowBlur = 10;
 
-  // Zen physical Wind Chime stroke physics
-  const triggerChime = (chimeIdx) => {
-    if (audioActive) {
-      audioHelper.playChime(chimeIdx + 2); // Pentatonic scale note
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
     }
-    
-    // Animate visual rotation/swing using temporary state
-    setChimeAngles(prev => prev.map((a, i) => i === chimeIdx ? 12 : a));
-    setTimeout(() => {
-      setChimeAngles(prev => prev.map((a, i) => i === chimeIdx ? -8 : a));
-    }, 150);
-    setTimeout(() => {
-      setChimeAngles(prev => prev.map((a, i) => i === chimeIdx ? 4 : a));
-    }, 350);
-    setTimeout(() => {
-      setChimeAngles(prev => prev.map((a, i) => i === chimeIdx ? 0 : a));
-    }, 600);
-  };
+    ctx.stroke();
 
-  // Compound wealth calculation formula
-  const getCompoundProjectedVal = () => {
-    const P = monthlyInvest;
-    const r = returnRate / 100;
-    const n = compoundYears * 12;
-    if (r === 0) return P * n;
-    
-    // S = P * (((1 + r/12)^(n) - 1) / (r/12)) * (1 + r/12)
-    const monthlyRate = r / 12;
-    const S = P * ((Math.pow(1 + monthlyRate, n) - 1) / monthlyRate) * (1 + monthlyRate);
-    return Math.round(S);
-  };
-
-  const getCompoundInvestedVal = () => {
-    return monthlyInvest * compoundYears * 12;
-  };
-
-  // Render curved SVG charts based on slider states
-  const generateCompoundSvgPath = () => {
-    const points = [];
-    const maxVal = getCompoundProjectedVal();
-    const P = monthlyInvest;
-    const r = returnRate / 100;
-    const totalMonths = compoundYears * 12;
-    const monthlyRate = r / 12;
-    
-    // Sample 10 coordinate points for the SVG bezier curve
-    for (let i = 0; i <= 9; i++) {
-      const currentMonth = Math.round((totalMonths / 9) * i);
-      const val = monthlyRate === 0 
-        ? P * currentMonth 
-        : P * ((Math.pow(1 + monthlyRate, currentMonth) - 1) / monthlyRate) * (1 + monthlyRate);
-        
-      const x = (i / 9) * 100; // percent wide
-      const y = 90 - (val / maxVal) * 80; // scale y value (reserve padding bottom/top)
-      points.push(`${x},${y}`);
-    }
-    
-    const linePath = `M ${points.join(' L ')}`;
-    const areaPath = `${linePath} L 100,90 L 0,90 Z`;
-    return { linePath, areaPath };
-  };
-
-  const compoundPaths = generateCompoundSvgPath();
-
-  // Habit toggling triggers fire particle
-  const toggleHabit = (key) => {
-    playSoundEffect();
-    setCheckedHabits(prev => {
-      const nextChecked = { ...prev, [key]: !prev[key] };
-      const numChecked = Object.values(nextChecked).filter(Boolean).length;
-      if (numChecked === 3) {
-        setHabitStreak(h => h + 1);
-        if (audioActive) {
-          audioHelper.playEchoChime(880, audioHelper.audioCtx.currentTime);
-        }
-      }
-      return nextChecked;
+    // Reset shadow & draw node points
+    ctx.shadowBlur = 0;
+    points.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = '#08080c';
+      ctx.strokeStyle = '#dfb15b';
+      ctx.lineWidth = 2;
+      ctx.fill();
+      ctx.stroke();
     });
+
+  }, [activeModal]);
+
+  // Handle valuations canvas hover state
+  const handleValuationsMouseMove = (e) => {
+    if (!growthCanvasRef.current) return;
+    const canvas = growthCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const w = canvas.width;
+    const h = canvas.height;
+
+    const points = entrepreneurData.chartPoints.map(p => ({
+      x: (p.pctX / 100) * w,
+      y: (p.pctY / 100) * h,
+      label: p.label,
+      value: p.value
+    }));
+
+    let activePoint = null;
+    points.forEach(p => {
+      const dx = p.x - mouseX;
+      const dy = p.y - mouseY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 18) {
+        activePoint = p;
+      }
+    });
+
+    if (activePoint) {
+      setHoveredChartPoint(activePoint);
+      setChartTooltipPos({ x: activePoint.x, y: activePoint.y });
+    } else {
+      setHoveredChartPoint(null);
+    }
   };
 
+  // ==========================================
+  // INTERACTIVE TRIGGERS
+  // ==========================================
+  // Card neomorphic tilt engine
+  const handleCardMouseMove = (e, cardType) => {
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const xPct = (x / rect.width) * 100;
+    const yPct = (y / rect.height) * 100;
+    card.style.setProperty('--mouse-x', `${xPct}%`);
+    card.style.setProperty('--mouse-y', `${yPct}%`);
+
+    const xRot = ((x / rect.width) - 0.5) * 12;
+    const yRot = -((y / rect.height) - 0.5) * 12;
+    card.style.transform = `perspective(1000px) rotateY(${xRot}deg) rotateX(${yRot}deg) scale3d(1.015, 1.015, 1.015)`;
+
+    // Parallax sub-offsets
+    const pStrength = -15;
+    const xShift = ((x / rect.width) - 0.5) * pStrength;
+    const yShift = ((y / rect.height) - 0.5) * pStrength;
+
+    const laptop = card.querySelector('.floating-laptop');
+    const term = card.querySelector('.terminal-mock');
+    const pols = card.querySelector('.polaroid-stack');
+    const river = card.querySelector('.animated-river-svg');
+    const vinyl = card.querySelector('.vinyl-mock');
+    const dashboard = card.querySelector('.startup-dashboard-mini');
+
+    if (laptop) laptop.style.transform = `translate3d(${xShift}px, ${yShift}px, 20px)`;
+    if (term) term.style.transform = `translate3d(${xShift}px, ${yShift}px, 20px)`;
+    if (pols) pols.style.transform = `translate3d(${xShift}px, ${yShift}px, 20px)`;
+    if (river) river.style.transform = `translate3d(${xShift / 2}px, 0, 10px)`;
+    if (vinyl) vinyl.style.transform = `translate3d(${xShift}px, ${yShift}px, 20px)`;
+    if (dashboard) dashboard.style.transform = `translate3d(${xShift}px, ${yShift}px, 20px)`;
+  };
+
+  const handleCardMouseLeave = (e) => {
+    const card = e.currentTarget;
+    card.style.transform = 'perspective(1000px) rotateY(0deg) rotateX(0deg) scale3d(1, 1, 1)';
+
+    const laptop = card.querySelector('.floating-laptop');
+    const term = card.querySelector('.terminal-mock');
+    const pols = card.querySelector('.polaroid-stack');
+    const river = card.querySelector('.animated-river-svg');
+    const vinyl = card.querySelector('.vinyl-mock');
+    const dashboard = card.querySelector('.startup-dashboard-mini');
+
+    if (laptop) laptop.style.transform = 'translate3d(0, 0, 20px)';
+    if (term) term.style.transform = 'translate3d(0, 0, 20px)';
+    if (pols) pols.style.transform = 'translate3d(0, 0, 20px)';
+    if (river) river.style.transform = 'translate3d(0, 0, 10px)';
+    if (vinyl) vinyl.style.transform = 'translate3d(0, 0, 20px)';
+    if (dashboard) dashboard.style.transform = 'translate3d(0, 0, 20px)';
+  };
+
+  // CLI Command processor
+  const handleCLISubmit = (e) => {
+    if (e.key === 'Enter') {
+      const cmd = cliInput.trim().toLowerCase();
+      setCliInput("");
+
+      const logsCopy = [...cliLogs, { text: `giridhar@system:~$ ${cmd}`, type: 'prompt' }];
+      let outputText = "";
+
+      switch (cmd) {
+        case 'help':
+          outputText = codingData.terminalOutputs.help;
+          break;
+        case 'skills':
+          outputText = codingData.terminalOutputs.skills;
+          break;
+        case 'streak':
+          outputText = codingData.terminalOutputs.streak;
+          break;
+        case 'github':
+          outputText = codingData.terminalOutputs.github;
+          break;
+        case 'about':
+          outputText = codingData.terminalOutputs.about;
+          break;
+        case 'matrix':
+          outputText = codingData.terminalOutputs.matrix;
+          break;
+        case 'clear':
+          setCliLogs([]);
+          return;
+        case '':
+          setCliLogs(logsCopy);
+          return;
+        default:
+          outputText = `<span class="cmd-err">Command unrecognized: '${cmd}'. Type 'help' to review guidelines.</span>`;
+      }
+
+      setCliLogs([...logsCopy, { text: outputText, type: 'output' }]);
+
+      // Scroll to bottom of terminal
+      setTimeout(() => {
+        const cliPane = document.getElementById('ide-tab-term');
+        if (cliPane) cliPane.scrollTop = cliPane.scrollHeight;
+      }, 50);
+    }
+  };
+
+  // Food Branding Mixer
+  const toggleMixPill = (id) => {
+    if (selectedMixPills.includes(id)) {
+      setSelectedMixPills(prev => prev.filter(p => p !== id));
+    } else {
+      setSelectedMixPills(prev => [...prev, id]);
+    }
+  };
+
+  const handleMixSynthesize = () => {
+    if (selectedMixPills.length === 0) {
+      alert("Please select at least one concept parameter node to fuse.");
+      return;
+    }
+    setSynthesizedConcept("Processing matrices... Synthesizing target model...");
+    setTimeout(() => {
+      let outcome = "";
+      if (selectedMixPills.includes('d-tech') && selectedMixPills.includes('d-plate')) {
+        outcome = "GASTROBYTE PLATFORM: A private membership culinary club which utilizes neomorphic layout profiles to live-tailor gourmet plating styles based on local organic supply parameters.";
+      } else if (selectedMixPills.includes('d-tech') && selectedMixPills.includes('d-cloud')) {
+        outcome = "AUTO-KITCHEN BOT SYSTEMS: High-volume culinary micro-facilities operated via automated Docker nodes. Reduces prep-overhead cost indexes by 48.2% through smart routing loops.";
+      } else if (selectedMixPills.includes('d-farm') && selectedMixPills.includes('d-plate')) {
+        outcome = "THE SACRED TABLE: An eco-luxury culinary experience matching mountain ingredient cycles directly to artistic table dynamics. Showcases organic simplicity.";
+      } else if (selectedMixPills.includes('d-cloud') && selectedMixPills.includes('d-farm')) {
+        outcome = "FARM-STREAM: B2B automated marketplace establishing encrypted supply agreements directly between mountain food hubs and cloud hubs.";
+      } else {
+        outcome = "CULINIQUE LABS: A modern tech-forward bakery/kitchen merging bespoke brand identities with high-efficiency culinary delivery systems. Fusing food culture with digital utility.";
+      }
+      setSynthesizedConcept(outcome);
+    }, 800);
+  };
+
+  // ==========================================
+  // RENDERING COMPONENTS
+  // ==========================================
   return (
-    <div className="app-container">
-      
-      {/* SVG Water Turbulence Filters for Flowing River */}
-      <svg style={{ position: 'absolute', width: 0, height: 0 }}>
-        <defs>
-          <filter id="water-flow-filter">
-            {/* Dynamic turbulence animated via slow fractal frequency warping */}
-            <feTurbulence type="fractalNoise" baseFrequency="0.015 0.06" numOctaves="3" result="noise">
-              <animate attributeName="baseFrequency" dur="18s" values="0.015 0.06;0.015 0.12;0.015 0.06" repeatCount="indefinite" />
-            </feTurbulence>
-            <feDisplacementMap in="SourceGraphic" in2="noise" scale="12" xChannelSelector="R" yChannelSelector="G" />
-          </filter>
-        </defs>
-      </svg>
-
-      {/* Background Scenic Layers */}
-      <div className="background-wrapper">
-        <img 
-          src="/master_bg.png" 
-          alt="Ethereal Mountain River Forest Backdrop" 
-          className="master-background"
-        />
-        {/* River layer with the actual turbulent displacement filter applied */}
-        <div className="river-flow-overlay" />
-        
-        {/* Slowly floating misty overlay */}
-        <div className="mist-layer" />
-      </div>
-
-      {/* Canvas for floating magical embers & river vapor */}
-      <canvas ref={canvasRef} className="particles-canvas" />
-
-      {/* SVG Connection Energy lines (Desktop Only) */}
-      <svg className="connections-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-        <path d="M 50 48 Q 35 33, 25 18" className={`connection-path ${activeNode === 'code' ? 'active' : ''}`} style={{ '--active-glow': 'var(--color-cyan)' }} />
-        <path d="M 50 48 Q 32 40, 19 35" className={`connection-path ${activeNode === 'github' ? 'active' : ''}`} style={{ '--active-glow': 'var(--color-emerald)' }} />
-        <path d="M 50 48 Q 31 50, 18 52" className={`connection-path ${activeNode === 'photography' ? 'active' : ''}`} style={{ '--active-glow': 'var(--color-rose)' }} />
-        <path d="M 50 48 Q 35 63, 24 78" className={`connection-path ${activeNode === 'nature' ? 'active' : ''}`} style={{ '--active-glow': 'var(--color-amber)' }} />
-        <path d="M 50 48 Q 65 33, 75 18" className={`connection-path ${activeNode === 'music' ? 'active' : ''}`} style={{ '--active-glow': 'var(--color-purple)' }} />
-        <path d="M 50 48 Q 68 40, 81 35" className={`connection-path ${activeNode === 'food' ? 'active' : ''}`} style={{ '--active-glow': 'var(--color-amber)' }} />
-        <path d="M 50 48 Q 69 50, 82 52" className={`connection-path ${activeNode === 'growth' ? 'active' : ''}`} style={{ '--active-glow': 'var(--color-emerald)' }} />
-        <path d="M 50 48 Q 65 63, 76 78" className={`connection-path ${activeNode === 'journey' ? 'active' : ''}`} style={{ '--active-glow': 'var(--color-blue)' }} />
-      </svg>
-
-      {/* Header Bar */}
-      <header className="header-bar">
-        <div className="header-left">
-          <Compass className="node-icon" />
-          <span>Explore My World</span>
-        </div>
-        
-        <div className="header-center">
-          <h1 className="main-title" id="main-heading">GIRIDHAR U</h1>
-          <p className="subtitle">ENGINEER • CREATOR • BUILDER</p>
-        </div>
-
-        <div className="header-right">
-          <span className="quote-tag">"Building today for a better tomorrow."</span>
-          {/* Audio toggle button with reactive visualizer bars */}
-          <button 
-            type="button"
-            className={`audio-visualizer-toggle ${audioActive ? 'audio-active' : ''}`} 
-            onClick={toggleAudio}
-            aria-label="Toggle Ethereal Soundscape"
-          >
-            <div className="visualizer-bars">
-              <div className="bar" />
-              <div className="bar" />
-              <div className="bar" />
-              <div className="bar" />
+    <div>
+      {/* 1. CINEMATIC BOOT LOADER SCREEN */}
+      {booting && (
+        <div id="boot-screen" className="boot-screen">
+          <div className="boot-loader">
+            <div className="boot-logo">
+              <svg viewBox="0 0 100 100" className="pulsing-logo">
+                <polygon points="50,15 90,38 90,82 50,60" fill="none" stroke="url(#logo-grad)" strokeWidth="2"/>
+                <polygon points="50,15 10,38 10,82 50,60" fill="none" stroke="url(#logo-grad)" strokeWidth="2"/>
+                <polygon points="50,60 90,82 50,95 10,82" fill="none" stroke="url(#logo-grad)" strokeWidth="2"/>
+                <defs>
+                  <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#dfb15b"/>
+                    <stop offset="50%" stopColor="#e07a5f"/>
+                    <stop offset="100%" stopColor="#6366f1"/>
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
-            {audioActive ? <Volume2 size={13} style={{color: '#d4af37'}} /> : <VolumeX size={13} style={{color: 'rgba(255,255,255,0.4)'}} />}
-          </button>
-        </div>
-      </header>
-
-      {/* Glowing aura background behind multi-armed avatar */}
-      <div className="center-halo-glow" />
-
-      {/* Interactive Radial Spatial Nodes */}
-      <main className="nodes-container" aria-label="Interactive portfolio nodes">
-        {/* Node 1: CODE */}
-        <div 
-          className={`interactive-node node-code ${activeCard === 'code' ? 'active' : ''}`}
-          onMouseEnter={() => handleNodeHover('code')}
-          onMouseLeave={() => setActiveNode(null)}
-          onClick={() => { playSoundEffect(); setActiveCard('code'); }}
-        >
-          <div className="node-trigger">
-            <CodeIcon className="node-icon" />
-          </div>
-          <div className="node-label">
-            <p className="node-title">Code</p>
-            <p className="node-desc">Problem Solver & Sandbox</p>
+            <div className="boot-console">
+              {bootLogs.join("\n")}
+            </div>
+            <div className="boot-progress-bar">
+              <div className="boot-progress" style={{ width: `${bootProgress}%` }}></div>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Node 2: GITHUB */}
-        <div 
-          className={`interactive-node node-github ${activeCard === 'github' ? 'active' : ''}`}
-          onMouseEnter={() => handleNodeHover('github')}
-          onMouseLeave={() => setActiveNode(null)}
-          onClick={() => { playSoundEffect(); setActiveCard('github'); }}
-        >
-          <div className="node-trigger">
-            <GithubIcon className="node-icon" />
-          </div>
-          <div className="node-label">
-            <p className="node-title">GitHub</p>
-            <p className="node-desc">Open Source Contributor</p>
-          </div>
-        </div>
+      {/* 2. MASTER APPLICATION CONTAINER */}
+      {!booting && (
+        <main className="app-wrapper">
+          {/* Top header navigation block */}
+          <header className="app-header">
+            <div className="header-logo">
+              <span className="logo-text">GIRIDHAR<span className="gold-dot">.</span>U</span>
+            </div>
+            <div className="header-status">
+              <div className="pulse-indicator"></div>
+              <span>PORTFOLIO OS v2.6.0 // REACT STATE ACTIVE</span>
+            </div>
+            <div className="header-clock">
+              {currentTime}
+            </div>
+          </header>
 
-        {/* Node 3: PHOTOGRAPHY */}
-        <div 
-          className={`interactive-node node-photography ${activeCard === 'photography' ? 'active' : ''}`}
-          onMouseEnter={() => handleNodeHover('photography')}
-          onMouseLeave={() => setActiveNode(null)}
-          onClick={() => { playSoundEffect(); setActiveCard('photography'); }}
-        >
-          <div className="node-trigger">
-            <CameraIcon className="node-icon" />
+          {/* Ambient atmosphere flows */}
+          <div className="ambient-glows">
+            <div className="glow-orb orb-1"></div>
+            <div className="glow-orb orb-2"></div>
+            <div className="glow-orb orb-3"></div>
           </div>
-          <div className="node-label">
-            <p className="node-title">Photography</p>
-            <p className="node-desc">Capturing Ethereal Moments</p>
-          </div>
-        </div>
 
-        {/* Node 4: NATURE */}
-        <div 
-          className={`interactive-node node-nature ${activeCard === 'nature' ? 'active' : ''}`}
-          onMouseEnter={() => handleNodeHover('nature')}
-          onMouseLeave={() => setActiveNode(null)}
-          onClick={() => { playSoundEffect(); setActiveCard('nature'); }}
-        >
-          <div className="node-trigger">
-            <MountainIcon className="node-icon" />
-          </div>
-          <div className="node-label">
-            <p className="node-title">Nature</p>
-            <p className="node-desc">Wind Chimes & Harmony</p>
-          </div>
-        </div>
-
-        {/* Node 5: MUSIC */}
-        <div 
-          className={`interactive-node node-music ${activeCard === 'music' ? 'active' : ''}`}
-          onMouseEnter={() => handleNodeHover('music')}
-          onMouseLeave={() => setActiveNode(null)}
-          onClick={() => { playSoundEffect(); setActiveCard('music'); }}
-        >
-          <div className="node-trigger">
-            <MusicIcon className="node-icon" />
-          </div>
-          <div className="node-label">
-            <p className="node-title">Music</p>
-            <p className="node-desc">Singer & Waveform Mixer</p>
-          </div>
-        </div>
-
-        {/* Node 6: FOOD INDUSTRY */}
-        <div 
-          className={`interactive-node node-food ${activeCard === 'food' ? 'active' : ''}`}
-          onMouseEnter={() => handleNodeHover('food')}
-          onMouseLeave={() => setActiveNode(null)}
-          onClick={() => { playSoundEffect(); setActiveCard('food'); }}
-        >
-          <div className="node-trigger">
-            <FoodIcon className="node-icon" />
-          </div>
-          <div className="node-label">
-            <p className="node-title">Gastronomy</p>
-            <p className="node-desc">Artisanal Flavor Planner</p>
-          </div>
-        </div>
-
-        {/* Node 7: GROWTH */}
-        <div 
-          className={`interactive-node node-growth ${activeCard === 'growth' ? 'active' : ''}`}
-          onMouseEnter={() => handleNodeHover('growth')}
-          onMouseLeave={() => setActiveNode(null)}
-          onClick={() => { playSoundEffect(); setActiveCard('growth'); }}
-        >
-          <div className="node-trigger">
-            <GrowthIcon className="node-icon" />
-          </div>
-          <div className="node-label">
-            <p className="node-title">Growth</p>
-            <p className="node-desc">Wealth Compound Calculator</p>
-          </div>
-        </div>
-
-        {/* Node 8: JOURNEY */}
-        <div 
-          className={`interactive-node node-journey ${activeCard === 'journey' ? 'active' : ''}`}
-          onMouseEnter={() => handleNodeHover('journey')}
-          onMouseLeave={() => setActiveNode(null)}
-          onClick={() => { playSoundEffect(); setActiveCard('journey'); }}
-        >
-          <div className="node-trigger">
-            <JourneyIcon className="node-icon" />
-          </div>
-          <div className="node-label">
-            <p className="node-title">Journey</p>
-            <p className="node-desc">Documenting My Timeline</p>
-          </div>
-        </div>
-      </main>
-
-      {/* Central motto signature */}
-      <div className="central-callout">
-        <p className="cursive-phrase">I build. I create. I explore.</p>
-        <p className="motto">A never ending journey of becoming.</p>
-        
-        <div className="scroll-indicator">
-          <span>Explore Interactive Realms</span>
-          <div className="mouse-icon">
-            <div className="mouse-wheel" />
-          </div>
-        </div>
-      </div>
-
-      {/* Ambient Backdrop Dimmer when overlay card is open */}
-      <div 
-        className={`ambient-dimmer ${activeCard ? 'active' : ''}`} 
-        onClick={() => { playSoundEffect(); setActiveCard(null); }}
-      />
-
-      {/* HIGH FIDELITY DETAILED OVERLAY CARDS */}
-      <div className={`overlay-panel-container ${activeCard ? 'active' : ''}`}>
-        {activeCard === 'code' && (
-          <div className="interactive-card glass-panel" style={{ '--accent-color': 'var(--color-cyan)' }}>
-            <div className="card-header">
-              <div className="card-title-group">
-                <div className="card-icon-wrapper"><CodeIcon /></div>
-                <div>
-                  <h2 className="card-title">Problem Solver Sandbox</h2>
-                  <p className="card-subtitle">Two Sum Algorithm Solver</p>
+          {/* 3. DYNAMIC MODULAR GRID (OTTO UI INSPIRED) */}
+          <section className="portfolio-grid">
+            
+            {/* HERO CARD (2x1 Column layout block) */}
+            <article 
+              className="portfolio-card hero-card"
+              onMouseMove={(e) => handleCardMouseMove(e, 'hero')}
+              onMouseLeave={handleCardMouseLeave}
+              onClick={() => setActiveModal('modal-hero')}
+            >
+              <div className="card-inner">
+                <div className="card-glow"></div>
+                <div className="card-visual">
+                  <div className="floating-laptop-wrapper">
+                    <svg viewBox="0 0 300 200" className="floating-laptop">
+                      <rect x="50" y="30" width="200" height="120" rx="6" fill="#14141d" stroke="#ffffff1a" strokeWidth="2"/>
+                      <rect x="53" y="33" width="194" height="114" rx="4" fill="url(#screen-glow)" />
+                      <path d="M65,48 L120,48 M65,60 L235,60 M65,72 L180,72 M65,84 L140,84 M65,96 L210,96" stroke="#ffffff15" strokeWidth="2" strokeLinecap="round"/>
+                      <path d="M65,115 L85,115 M95,115 L125,115" stroke="#dfb15b" strokeWidth="3" strokeLinecap="round"/>
+                      <circle cx="150" cy="90" r="25" fill="#6366f1" opacity="0.15" filter="blur(8px)"/>
+                      <rect x="30" y="150" width="240" height="12" rx="4" fill="#2d2d3a"/>
+                      <rect x="110" y="150" width="80" height="4" fill="#1a1a24"/>
+                      <polygon points="20,162 280,162 265,172 35,172" fill="#21212b"/>
+                      <rect x="120" y="162" width="60" height="3" rx="1.5" fill="#14141d"/>
+                      <defs>
+                        <linearGradient id="screen-glow" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#19192b"/>
+                          <stop offset="100%" stopColor="#0f0f15"/>
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+                  <div className="mini-git-graph">
+                    <span className="tech-metric">// GIT STREAM</span>
+                    <div className="git-nodes">
+                      <div className="git-node active"></div>
+                      <div className="git-node"></div>
+                      <div className="git-node blue"></div>
+                      <div className="git-node"></div>
+                      <div className="git-node active"></div>
+                      <div className="git-node"></div>
+                      <div className="git-node"></div>
+                      <div className="git-node blue"></div>
+                      <div className="git-node active"></div>
+                      <div className="git-node"></div>
+                      <div className="git-node"></div>
+                      <div className="git-node blue"></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="card-content">
+                  <h1 className="card-title display-title">{profileData.name}</h1>
+                  <p className="card-subtitle">{profileData.subtitle}</p>
+                  <p className="card-description">{profileData.description}</p>
+                  <span className="explore-btn">EXPLORE DOSSIER <i className="fa-solid fa-arrow-right-long"></i></span>
                 </div>
               </div>
-              <button 
-                type="button"
-                className="card-close-btn" 
-                onClick={() => { playSoundEffect(); setActiveCard(null); }}
-                aria-label="Close panel"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            
-            <div className="card-content">
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginBottom: '16px', lineHeight: '1.5' }}>
-                Write an efficient algorithm to identify two indices that compound to the target sum. Below is my optimized solution.
-              </p>
-              
-              <div className="ide-container">
-                <div className="ide-header">
-                  <div className="ide-dots">
-                    <div className="ide-dot" />
-                    <div className="ide-dot" />
-                    <div className="ide-dot" />
+            </article>
+
+            {/* CARD 1 — CODING LIFE */}
+            <article 
+              className="portfolio-card coding-card"
+              onMouseMove={(e) => handleCardMouseMove(e, 'coding')}
+              onMouseLeave={handleCardMouseLeave}
+              onClick={() => setActiveModal('modal-coding')}
+            >
+              <div className="card-inner">
+                <div className="card-glow"></div>
+                <div className="card-visual">
+                  <div className="terminal-mock">
+                    <div className="term-header">
+                      <span className="dot red"></span>
+                      <span className="dot yellow"></span>
+                      <span className="dot green"></span>
+                      <span className="term-title">build_main.cpp</span>
+                    </div>
+                    <div className="term-body">
+                      <p><span className="tok-kw">const</span> <span class="tok-type">auto</span> <span className="tok-fn">builder</span> = <span className="tok-cls">Giridhar</span>();</p>
+                      <p><span className="tok-fn">builder</span>.<span className="tok-meth">deploy</span>({`{`}</p>
+                      <p>&nbsp;&nbsp;<span className="tok-str">"consistency"</span>,</p>
+                      <p>&nbsp;&nbsp;<span className="tok-str">"ambition"</span></p>
+                      <p>{`});`}</p>
+                    </div>
                   </div>
-                  <span>twoSumSolver.js</span>
-                  <button 
-                    type="button"
-                    className="ide-btn" 
-                    onClick={runCodeSolution} 
-                    disabled={codeRunning}
-                  >
-                    <Play size={11} fill="currentColor" />
-                    {codeRunning ? 'Running Sandbox...' : 'Run Code Solution'}
-                  </button>
+                  <div className="leetcode-mini-widget">
+                    <div className="streak-ring">
+                      <svg viewBox="0 0 36 36" className="circular-chart">
+                        <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#222" strokeWidth="2"/>
+                        <path className="circle" strokeDasharray="85, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#6366f1" strokeWidth="2"/>
+                      </svg>
+                      <div className="streak-text">
+                        <span className="streak-num">{codingData.streak}</span>
+                        <span className="streak-lbl">STREAK</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="ide-body">
-                  <span className="ide-comment">// Time Complexity: O(n) | Space Complexity: O(n)</span><br />
-                  <span className="ide-keyword">function</span> <span className="ide-code">twoSum</span>(nums, target) &#123;<br />
-                  &nbsp;&nbsp;<span className="ide-keyword">const</span> map = <span className="ide-keyword">new</span> <span className="ide-code">Map</span>();<br />
-                  &nbsp;&nbsp;<span className="ide-keyword">for</span> (<span className="ide-keyword">let</span> i = 0; i &lt; nums.length; i++) &#123;<br />
-                  &nbsp;&nbsp;&nbsp;&nbsp;<span className="ide-keyword">const</span> complement = target - nums[i];<br />
-                  &nbsp;&nbsp;&nbsp;&nbsp;<span className="ide-keyword">if</span> (map.has(complement)) &#123;<br />
-                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="ide-keyword">return</span> [map.get(complement), i];<br />
-                  &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br />
-                  &nbsp;&nbsp;&nbsp;&nbsp;map.set(nums[i], i);<br />
-                  &nbsp;&nbsp;&#125;<br />
-                  &#125;
-                  
-                  {codeConsole.length > 0 && (
-                    <div className="ide-output" style={{ '--ide-status-color': codeRunning ? '#eab308' : '#10b981' }}>
-                      {codeConsole.map((line, idx) => (
-                        <div key={idx} style={{ color: line.startsWith('✔') ? '#34d399' : line.startsWith('[System]') ? '#60a5fa' : '#f3f4f6', fontFamily: 'monospace' }}>
-                          {line}
+                <div className="card-content">
+                  <h2 className="card-title">CODING LIFE</h2>
+                  <p className="card-tagline">Late-night builder energy.</p>
+                  <p className="card-description">Solving problems daily. Building consistency through code.</p>
+                  <span className="explore-btn">COMPILE & RUN <i className="fa-solid fa-code"></i></span>
+                </div>
+              </div>
+            </article>
+
+            {/* CARD 2 — PHOTOGRAPHY */}
+            <article 
+              className="portfolio-card photography-card"
+              onMouseMove={(e) => handleCardMouseMove(e, 'photography')}
+              onMouseLeave={handleCardMouseLeave}
+              onClick={() => setActiveModal('modal-photography')}
+            >
+              <div className="card-inner">
+                <div className="card-glow"></div>
+                <div className="card-visual">
+                  <div className="polaroid-stack">
+                    <div className="polaroid polaroid-3">
+                      <img src="/photography_nature.png" alt="Nature slide 3" />
+                    </div>
+                    <div className="polaroid polaroid-2">
+                      <img src="/food_luxury.png" alt="Food slide 2" />
+                    </div>
+                    <div className="polaroid polaroid-1">
+                      <img src="/photography_nature.png" alt="Nature active slide 1" />
+                      <div className="polaroid-caption">35mm Film // Mountain Mist</div>
+                    </div>
+                  </div>
+                  <svg viewBox="0 0 100 100" className="floating-lens-svg">
+                    <circle cx="50" cy="50" r="30" fill="none" stroke="#dfb15b" strokeWidth="1.5" opacity="0.3"/>
+                    <circle cx="50" cy="50" r="20" fill="none" stroke="#dfb15b" strokeWidth="1" opacity="0.5"/>
+                    <line x1="20" y1="50" x2="80" y2="50" stroke="#dfb15b" strokeWidth="0.5" opacity="0.2"/>
+                    <line x1="50" y1="20" x2="50" y2="80" stroke="#dfb15b" strokeWidth="0.5" opacity="0.2"/>
+                  </svg>
+                </div>
+                <div className="card-content">
+                  <h2 className="card-title">PHOTOGRAPHY</h2>
+                  <p className="card-tagline">Creative and cinematic.</p>
+                  <p className="card-description">Capturing moments that feel alive.</p>
+                  <span className="explore-btn">OPEN VIEWFINDER <i class="fa-solid fa-camera"></i></span>
+                </div>
+              </div>
+            </article>
+
+            {/* CARD 3 — NATURE */}
+            <article 
+              className="portfolio-card nature-card"
+              onMouseMove={(e) => handleCardMouseMove(e, 'nature')}
+              onMouseLeave={handleCardMouseLeave}
+              onClick={() => setActiveModal('modal-nature')}
+            >
+              <div className="card-inner">
+                <div className="card-glow"></div>
+                <div className="card-visual">
+                  <div className="nature-canvas-wrapper">
+                    <svg viewBox="0 0 200 120" className="animated-river-svg">
+                      <path id="river-wave-1" d="M0,80 Q50,60 100,80 T200,80 L200,120 L0,120 Z" fill="url(#river-gradient-1)" opacity="0.7"/>
+                      <path id="river-wave-2" d="M0,90 Q50,75 100,90 T200,90 L200,120 L0,120 Z" fill="url(#river-gradient-2)" opacity="0.8"/>
+                      <defs>
+                        <linearGradient id="river-gradient-1" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#122c2a"/>
+                          <stop offset="100%" stopColor="#0f1a24"/>
+                        </linearGradient>
+                        <linearGradient id="river-gradient-2" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#8ba888" stopOpacity="0.2"/>
+                          <stop offset="100%" stopColor="#1b4d3e" stopOpacity="0.6"/>
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="mini-clouds">
+                      <div className="mini-cloud c1"></div>
+                      <div className="mini-cloud c2"></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="card-content">
+                  <h2 className="card-title">NATURE</h2>
+                  <p className="card-tagline">Peaceful and immersive.</p>
+                  <p className="card-description">Nature resets my mind.</p>
+                  <span className="explore-btn">ENTER SANCTUARY <i className="fa-solid fa-mountain-sun"></i></span>
+                </div>
+              </div>
+            </article>
+
+            {/* CARD 4 — MUSIC */}
+            <article 
+              className="portfolio-card music-card"
+              onMouseMove={(e) => handleCardMouseMove(e, 'music')}
+              onMouseLeave={handleCardMouseLeave}
+              onClick={() => setActiveModal('modal-music')}
+            >
+              <div className="card-inner">
+                <div className="card-glow"></div>
+                <div className="card-visual">
+                  <div className="vinyl-mock">
+                    <div className="vinyl-sleeve">
+                      <svg viewBox="0 0 100 100" className="floating-mic-sleeve">
+                        <path d="M50,20 C42,20 38,26 38,34 L38,50 C38,58 42,64 50,64 C58,64 62,58 62,50 L62,34 C62,26 58,20 50,20 Z" fill="none" stroke="#ec4899" strokeWidth="2" opacity="0.6"/>
+                        <path d="M30,45 L30,50 C30,62 40,70 50,70 C60,70 70,62 70,50 L70,45" fill="none" stroke="#ec4899" strokeWidth="2" opacity="0.6"/>
+                        <line x1="50" y1="70" x2="50" y2="85" stroke="#ec4899" strokeWidth="3" opacity="0.6"/>
+                        <line x1="40" y1="85" x2="60" y2="85" stroke="#ec4899" strokeWidth="3" opacity="0.6"/>
+                      </svg>
+                    </div>
+                    <div className="vinyl-record">
+                      <div className="record-center"></div>
+                    </div>
+                  </div>
+                  <div className="music-wave-bars">
+                    <span className="bar b1"></span>
+                    <span className="bar b2"></span>
+                    <span className="bar b3"></span>
+                    <span className="bar b4"></span>
+                    <span className="bar b5"></span>
+                    <span className="bar b6"></span>
+                    <span className="bar b7"></span>
+                  </div>
+                </div>
+                <div className="card-content">
+                  <h2 className="card-title">MUSIC</h2>
+                  <p className="card-tagline">Emotional and artistic.</p>
+                  <p className="card-description">Singing is my escape.</p>
+                  <span className="explore-btn">TUNE IN <i className="fa-solid fa-music"></i></span>
+                </div>
+              </div>
+            </article>
+
+            {/* CARD 5 — FOOD INDUSTRY */}
+            <article 
+              className="portfolio-card food-card"
+              onMouseMove={(e) => handleCardMouseMove(e, 'food')}
+              onMouseLeave={handleCardMouseLeave}
+              onClick={() => setActiveModal('modal-food')}
+            >
+              <div className="card-inner">
+                <div className="card-glow"></div>
+                <div className="card-visual" style={{ backgroundImage: "url('/food_luxury.png')", backgroundSize: 'cover', backgroundPosition: 'center', filter: 'saturate(0.85) brightness(0.65)' }}>
+                  <div className="food-brand-overlay">
+                    <div className="brand-crest">
+                      <svg viewBox="0 0 100 100" className="brand-logo-svg">
+                        <path d="M50,15 L75,35 L75,70 L50,85 L25,70 L25,35 Z" fill="none" stroke="#dfb15b" strokeWidth="1.5"/>
+                        <path d="M50,22 L68,37 L68,66 L50,78 L32,66 L32,37 Z" fill="none" stroke="#dfb15b" strokeWidth="0.75" opacity="0.5"/>
+                        <circle cx="50" cy="50" r="10" fill="none" stroke="#dfb15b" strokeWidth="1"/>
+                      </svg>
+                    </div>
+                    <span className="brand-name">{foodData.brandName}</span>
+                    <span className="brand-tag">{foodData.brandTag}</span>
+                  </div>
+                </div>
+                <div className="card-content">
+                  <h2 className="card-title">FOOD INDUSTRY</h2>
+                  <p className="card-tagline">Warm entrepreneurial energy.</p>
+                  <p className="card-description">Passionate about experiences, people, and food culture.</p>
+                  <span className="explore-btn">VIEW CONCEPT <i className="fa-solid fa-utensils"></i></span>
+                </div>
+              </div>
+            </article>
+
+            {/* CARD 6 — ENTREPRENEUR MINDSET */}
+            <article 
+              className="portfolio-card mindset-card"
+              onMouseMove={(e) => handleCardMouseMove(e, 'mindset')}
+              onMouseLeave={handleCardMouseLeave}
+              onClick={() => setActiveModal('modal-mindset')}
+            >
+              <div className="card-inner">
+                <div className="card-glow"></div>
+                <div className="card-visual">
+                  <div className="startup-dashboard-mini">
+                    <div className="chart-header">
+                      <span className="title">MRR / TRACTION</span>
+                      <span className="growth-metric">+145.8%</span>
+                    </div>
+                    <svg viewBox="0 0 200 80" className="trend-chart-mini">
+                      <path d="M 0 65 Q 25 60 50 48 T 100 50 T 150 25 T 200 12 L 200 80 L 0 80 Z" fill="url(#growth-chart-gradient)" />
+                      <path d="M 0 65 Q 25 60 50 48 T 100 50 T 150 25 T 200 12" fill="none" stroke="#dfb15b" strokeWidth="2" />
+                      <circle cx="200" cy="12" r="4" fill="#dfb15b" />
+                      <circle cx="200" cy="12" r="8" fill="none" stroke="#dfb15b" strokeWidth="1" opacity="0.5" className="pulsing-chart-dot"/>
+                      <defs>
+                        <linearGradient id="growth-chart-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#dfb15b" stopOpacity="0.3"/>
+                          <stop offset="100%" stopColor="#dfb15b" stopOpacity="0"/>
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+                </div>
+                <div className="card-content">
+                  <h2 className="card-title">ENTREPRENEUR MINDSET</h2>
+                  <p className="card-tagline">Futuristic ambition.</p>
+                  <p className="card-description">Obsessed with growth, impact, and building wealth through creativity.</p>
+                  <span className="explore-btn">ACCESS PIPELINE <i className="fa-solid fa-arrow-trend-up"></i></span>
+                </div>
+              </div>
+            </article>
+
+          </section>
+
+          {/* ==========================================
+              4. IMMERSIVE COMPONENT OVERLAY (MODALS)
+              ========================================== */}
+          <div className={`immersive-modal-container ${activeModal ? 'active' : ''}`}>
+            
+            {activeModal && (
+              <button 
+                className="close-modal-btn" 
+                onClick={() => {
+                  setActiveModal(null);
+                  setIsMusicPlaying(false);
+                }}
+              >
+                <span className="btn-cross"></span>
+                <span>CLOSE DOSSIER</span>
+              </button>
+            )}
+
+            {/* A. HERO CARD EXPANDED */}
+            {activeModal === 'modal-hero' && (
+              <section className="modal-section">
+                <div className="modal-grid-layout hero-expanded">
+                  <div className="modal-left-col glass-panel">
+                    <h2 className="modal-section-title">{profileData.name}</h2>
+                    <p className="modal-section-subtitle">// FOUNDER • DEVELOPER • ARTIST</p>
+                    <div className="bio-paragraph">
+                      {profileData.bio.map((p, i) => <p key={i}>{p}</p>)}
+                    </div>
+                    
+                    <div className="core-metrics-list">
+                      <div className="metric-item">
+                        <span className="lbl">FOCUS</span>
+                        <span className="val">{profileData.focus}</span>
+                      </div>
+                      <div className="metric-item">
+                        <span className="lbl">ENTREPRENEURIAL PILLARS</span>
+                        <span className="val">{profileData.entrepreneurialPillars}</span>
+                      </div>
+                      <div className="metric-item">
+                        <span className="lbl">DISCIPLINE</span>
+                        <span className="val">{profileData.discipline}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="quick-status-board">
+                      <span className="board-header">PORTFOLIO OS // HOST CONNECTION</span>
+                      <div className="ping-block">
+                        <span><i className="fa-solid fa-network-wired"></i> Live Status:</span>
+                        <span className="ping-value positive">{profileData.status}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="modal-right-col glass-panel scrollable-y">
+                    <h3>JOURNEY TIMELINE</h3>
+                    <div className="timeline-tree">
+                      {profileData.timeline.map((node, i) => (
+                        <div className="timeline-node" key={i}>
+                          <div className="node-year">{node.year}</div>
+                          <div className="node-content">
+                            <h4>{node.title}</h4>
+                            <p>{node.description}</p>
+                          </div>
                         </div>
                       ))}
                     </div>
-                  )}
+                    
+                    <div className="connect-form-wrapper">
+                      <h3>SECURE TRANSMISSION</h3>
+                      <form className="cinematic-form" onSubmit={(e) => { e.preventDefault(); alert('Transmission secured. Giridhar will contact you shortly.'); }}>
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label>IDENTIFIER</label>
+                            <input type="text" placeholder="Your Name" required />
+                          </div>
+                          <div className="form-group">
+                            <label>COMM CHANNEL</label>
+                            <input type="email" placeholder="email@address.com" required />
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label>ENCRYPTED MESSAGE</label>
+                          <textarea rows="4" placeholder="Describe the venture..." required></textarea>
+                        </div>
+                        <button type="submit" className="submit-form-btn">TRANSMIT PACKET <i className="fa-solid fa-paper-plane"></i></button>
+                      </form>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
+              </section>
+            )}
 
-        {activeCard === 'github' && (
-          <div className="interactive-card glass-panel" style={{ '--accent-color': 'var(--color-emerald)' }}>
-            <div className="card-header">
-              <div className="card-title-group">
-                <div className="card-icon-wrapper"><GithubIcon /></div>
-                <div>
-                  <h2 className="card-title">GitHub Open Source Hub</h2>
-                  <p className="card-subtitle">Daily Contributions Grid</p>
-                </div>
-              </div>
-              <button 
-                type="button"
-                className="card-close-btn" 
-                onClick={() => { playSoundEffect(); setActiveCard(null); }}
-                aria-label="Close panel"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            
-            <div className="card-content">
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginBottom: '20px', lineHeight: '1.5' }}>
-                Interact with the commitment chart below! Click any node cell to submit a mock git push, increase contribution density, and trigger synthesized musical scale ripples.
-              </p>
-              
-              <div className="github-grid-wrapper">
-                <div className="github-grid">
-                  {githubGrid.map(cell => (
-                    <button
-                      key={cell.id}
-                      type="button"
-                      className={`github-cell lvl-${cell.lvl}`}
-                      onClick={() => handleGithubCellClick(cell.id)}
-                      style={{ color: cell.lvl > 0 ? '#39d353' : 'rgba(255,255,255,0.1)' }}
-                      title={`${cell.commits} commits on cell ${cell.id}`}
-                      aria-label={`${cell.commits} commits on contribution square ${cell.id}`}
-                    />
-                  ))}
-                </div>
-                
-                <div className="github-stats-row">
-                  <div className="github-stat-card">
-                    <h3 style={{ fontSize: '20px', color: '#39d353', fontWeight: 'bold' }}>2,847</h3>
-                    <p style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>Contributions past year</p>
-                  </div>
-                  <div className="github-stat-card">
-                    <h3 style={{ fontSize: '20px', color: '#39d353', fontWeight: 'bold' }}>48 Days</h3>
-                    <p style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>Current Commit Streak</p>
-                  </div>
-                  <div className="github-stat-card">
-                    <h3 style={{ fontSize: '20px', color: '#39d353', fontWeight: 'bold' }}>TypeScript</h3>
-                    <p style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>Favorite language</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeCard === 'photography' && (
-          <div className="interactive-card glass-panel" style={{ '--accent-color': 'var(--color-rose)' }}>
-            <div className="card-header">
-              <div className="card-title-group">
-                <div className="card-icon-wrapper"><CameraIcon /></div>
-                <div>
-                  <h2 className="card-title">Photography Deck</h2>
-                  <p className="card-subtitle">Ethereal Nature Captures</p>
-                </div>
-              </div>
-              <button 
-                type="button"
-                className="card-close-btn" 
-                onClick={() => { playSoundEffect(); setActiveCard(null); }}
-                aria-label="Close panel"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            
-            <div className="card-content">
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginBottom: '20px', lineHeight: '1.5', textAlign: 'center' }}>
-                Click the deck to trigger a synthesized DSLR camera shutter snap, shuffling beautiful gradient scenic polaroid captures.
-              </p>
-              
-              <div className="photography-container" onClick={shufflePhotos}>
-                {photos.map((photo, idx) => {
-                  // Calculate offsets to lay cards out in a 3D deck stack
-                  const offset = (idx - photoIndex + photos.length) % photos.length;
-                  const zIndex = photos.length - offset;
-                  const scale = 1 - offset * 0.05;
-                  const rotate = (idx % 2 === 0 ? 5 : -5) + offset * 4;
-                  const translateY = offset * -12;
-                  const opacity = offset === 3 ? 0 : 1;
-                  
-                  return (
-                    <div 
-                      key={idx}
-                      className="polaroid-photo"
-                      style={{
-                        zIndex,
-                        transform: `scale(${scale}) rotate(${rotate}deg) translateY(${translateY}px)`,
-                        opacity,
-                        pointerEvents: offset === 0 ? 'auto' : 'none'
-                      }}
-                    >
-                      <div className="polaroid-img-box" style={{ background: photo.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                        <CameraIcon size={36} opacity={0.2} />
+            {/* B. CODING LIFE EXPANDED */}
+            {activeModal === 'modal-coding' && (
+              <section className="modal-section">
+                <div className="modal-grid-layout coding-expanded">
+                  <div className="modal-left-col glass-panel flex-column">
+                    <h2 className="modal-section-title">ENGINEERING HUB</h2>
+                    <p className="modal-section-subtitle">// PROBLEM SOLVING & CODE STREAKS</p>
+                    
+                    <div className="detailed-leetcode-stats">
+                      <div className="stats-header">
+                        <i className="fa-solid fa-code-fork icon-indigo"></i>
+                        <span>ALGORITHMIC EFFICIENCY</span>
                       </div>
-                      <div className="polaroid-caption">
-                        {photo.title}
-                        <p style={{ fontFamily: 'sans-serif', fontSize: '9px', color: '#64748b', marginTop: '2px', fontWeight: 'normal' }}>
-                          {photo.desc}
+                      <div className="stats-grid">
+                        {codingData.categories.map((c, i) => (
+                          <div className="stat-card" key={i}>
+                            <span className="val">{c.value}</span>
+                            <span className="lbl">{c.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="github-heatmap-container">
+                      <div className="heatmap-header">
+                        <span>GIT COMMIT DENSITY (365 DAYS)</span>
+                        <span className="count">2,481 Contributions</span>
+                      </div>
+                      <div className="heatmap-grid">
+                        {Array.from({ length: 28 * 7 }).map((_, idx) => {
+                          const levels = [0, 1, 2, 3, 4];
+                          const level = levels[Math.floor(Math.sin(idx * 0.15) * 2.5 + 2)] || 0;
+                          return <div key={idx} className={`heatmap-cell level-${level}`}></div>;
+                        })}
+                      </div>
+                      <div className="heatmap-legend">
+                        <span>Less</span>
+                        <div className="legend-cells">
+                          <div className="cell level-0"></div>
+                          <div className="cell level-1"></div>
+                          <div className="cell level-2"></div>
+                          <div className="cell level-3"></div>
+                          <div className="cell level-4"></div>
+                        </div>
+                        <span>More</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="modal-right-col glass-panel ide-layout">
+                    <div className="ide-tabs-bar">
+                      <button className={`ide-tab ${activeIDETab === 'Solution.cpp' ? 'active' : ''}`} onClick={() => setActiveIDETab('Solution.cpp')}>
+                        <i className="fa-solid fa-file-code text-cyan"></i> Solution.cpp
+                      </button>
+                      <button className={`ide-tab ${activeIDETab === 'App.js' ? 'active' : ''}`} onClick={() => setActiveIDETab('App.js')}>
+                        <i className="fa-brands fa-js text-gold"></i> App.js
+                      </button>
+                      <button className={`ide-tab ${activeIDETab === 'terminal' ? 'active' : ''}`} onClick={() => setActiveIDETab('terminal')}>
+                        <i className="fa-solid fa-terminal text-indigo"></i> giridhar@system:~
+                      </button>
+                    </div>
+
+                    <div className="ide-content-area">
+                      {activeIDETab === 'Solution.cpp' && (
+                        <div className="ide-pane active">
+                          <pre className="code-editor"><code>{codingData.codeSnippets.cpp}</code></pre>
+                        </div>
+                      )}
+                      
+                      {activeIDETab === 'App.js' && (
+                        <div className="ide-pane active">
+                          <pre className="code-editor"><code>{codingData.codeSnippets.js}</code></pre>
+                        </div>
+                      )}
+
+                      {activeIDETab === 'terminal' && (
+                        <div className="ide-pane active flex-column justify-start" id="ide-tab-term">
+                          <div className="terminal-cli">
+                            <div className="term-log">
+                              {cliLogs.map((log, i) => (
+                                <p key={i} className={`term-prompt-line ${log.type === 'output' ? 'cmd-out' : ''}`} dangerouslySetInnerHTML={{ __html: log.text }} />
+                              ))}
+                            </div>
+                            <div className="term-input-wrapper">
+                              <span className="cli-prompt">giridhar@system:~$ </span>
+                              <input 
+                                type="text" 
+                                className="cli-input" 
+                                value={cliInput}
+                                onChange={(e) => setCliInput(e.target.value)}
+                                onKeyDown={handleCLISubmit}
+                                autoFocus
+                                autoComplete="off"
+                                spellCheck="false"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="ide-footer">
+                      <span>// UTF-8 // LF // Git branch: main //</span>
+                      <span>Ln 14, Col 27 // React Sandbox</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* C. PHOTOGRAPHY EXPANDED */}
+            {activeModal === 'modal-photography' && (
+              <section className="modal-section">
+                <div className="modal-grid-layout photography-expanded">
+                  <div className="modal-left-col glass-panel flex-column scrollable-y">
+                    <h2 class="modal-section-title">CREATIVE VIEWFINDER</h2>
+                    <p className="modal-section-subtitle">// THE WORLD IN 35MM FRAMES</p>
+                    <p className="section-desc">Photography is the discipline of catching raw light, frozen structures, and fluid horizons. I travel to capture natural architecture, rivers, and rugged mountains.</p>
+                    
+                    <div className="camera-lens-widget">
+                      <h4>LENS SETTINGS (INTERACTIVE FILTER)</h4>
+                      
+                      <div className="slider-group">
+                        <div className="slider-label">
+                          <span>SHUTTER SPEED (BRIGHTNESS)</span>
+                          <span className="lbl-val">1/{cameraShutter}s</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          className="camera-slider" 
+                          min="50" 
+                          max="200" 
+                          value={cameraShutter}
+                          onChange={(e) => setCameraShutter(parseInt(e.target.value))}
+                        />
+                      </div>
+
+                      <div className="slider-group">
+                        <div className="slider-label">
+                          <span>APERTURE (DEPTH BLUR)</span>
+                          <span className="lbl-val">f/{(cameraAperture / 2 + 1.2).toFixed(1)}</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          className="camera-slider" 
+                          min="0" 
+                          max="10" 
+                          value={cameraAperture}
+                          onChange={(e) => setCameraAperture(parseInt(e.target.value))}
+                        />
+                      </div>
+
+                      <div className="slider-group">
+                        <div className="slider-label">
+                          <span>ISO (FILM GRAIN)</span>
+                          <span className="lbl-val">ISO {cameraIso * 20}</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          className="camera-slider" 
+                          min="0" 
+                          max="100" 
+                          value={cameraIso}
+                          onChange={(e) => setCameraIso(parseInt(e.target.value))}
+                        />
+                      </div>
+
+                      <button 
+                        className="reset-filter-btn" 
+                        onClick={() => {
+                          setCameraShutter(100);
+                          setCameraAperture(0);
+                          setCameraIso(20);
+                        }}
+                      >
+                        RESET EXPOSURE
+                      </button>
+                    </div>
+
+                    <div className="lens-meta-card">
+                      <span className="meta-title">// HARDWARE SPEC</span>
+                      <div className="meta-row"><span>BODY:</span> <span>{photographyData.hardware.body}</span></div>
+                      <div className="meta-row"><span>FAV GLASS:</span> <span>{photographyData.hardware.glass}</span></div>
+                      <div className="meta-row"><span>LOCATION:</span> <span>{photographyData.hardware.location}</span></div>
+                    </div>
+                  </div>
+
+                  <div className="modal-right-col glass-panel scrollable-y flex-column">
+                    <div className="viewfinder-lens-wrapper">
+                      <div className="camera-focus-reticle">
+                        <span className="focus-bracket top-left"></span>
+                        <span className="focus-bracket top-right"></span>
+                        <span class="focus-bracket bottom-left"></span>
+                        <span className="focus-bracket bottom-right"></span>
+                        <span className="focus-indicator">AF-C</span>
+                      </div>
+                      
+                      <div className="photography-canvas">
+                        <img 
+                          src={activePhoto.image} 
+                          alt="Cinematic frame capture" 
+                          style={{
+                            filter: `brightness(${ (150 / cameraShutter) * 100 }%) blur(${ cameraAperture * 0.8 }px) contrast(105%)`,
+                            transition: 'filter 0.05s linear, opacity 0.2s ease',
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                        <div className="noise-overlay" style={{ opacity: cameraIso / 120 }}></div>
+                      </div>
+                    </div>
+
+                    <div className="photo-info-bar">
+                      <span className="photo-title">{activePhoto.title}</span>
+                      <span className="photo-coords">// {activePhoto.coordinates} //</span>
+                    </div>
+
+                    <div className="thumbnail-gallery-grid">
+                      {photographyData.gallery.map((photo) => (
+                        <div 
+                          key={photo.id} 
+                          className={`thumb-cell ${activePhoto.id === photo.id ? 'active' : ''}`}
+                          onClick={() => setActivePhoto(photo)}
+                        >
+                          <img src={photo.image} alt={photo.title} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* D. NATURE EXPANDED */}
+            {activeModal === 'modal-nature' && (
+              <section className="modal-section">
+                <div className="modal-grid-layout nature-expanded">
+                  <div className="modal-left-col glass-panel flex-column justify-between">
+                    <div>
+                      <h2 className="modal-section-title">THE SANCTUARY</h2>
+                      <p className="modal-section-subtitle">// RESETS NEURAL STATE & CORTISOL</p>
+                      <p className="section-desc">Nature is not a luxury; it is a profound biological reset. Walking through forests, watching flowing rivers, and standing before mountain scopes is where complex structures dissolve into clarity.</p>
+                    </div>
+
+                    <div className="breathing-widget">
+                      <h4>MINDFULNESS BREATHING REGULATOR</h4>
+                      <p className="breathing-desc">Sync your breathing to the expanding circle to reset neural cortisol levels.</p>
+                      <div className="breath-ring-container">
+                        <div 
+                          className="breathing-ring" 
+                          style={{ 
+                            transform: `scale(${breathingScale})`,
+                            transition: 'transform 4s ease-in-out'
+                          }}
+                        ></div>
+                        <div className="breathing-label">{breathingText}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="modal-right-col glass-panel relative flex-column">
+                    <canvas ref={natureCanvasRef} className="nature-canvas"></canvas>
+                    
+                    <div className="soundscape-controls-card">
+                      <h3>AMBIENT NATURE SOUND MIXER</h3>
+                      <p>Simulate calm natural acoustics by configuring the decibel filters below.</p>
+                      
+                      <div className="mixer-sliders">
+                        {natureData.sounds.map((sound) => (
+                          <div className="mixer-channel" key={sound.id}>
+                            <div className="ch-info">
+                              <span className="ch-name"><i className={sound.icon}></i> {sound.label}</span>
+                              <button 
+                                className={`mute-btn ${natureMuted[sound.id] ? 'active' : ''}`}
+                                onClick={() => setNatureMuted(prev => ({ ...prev, [sound.id]: !prev[sound.id] }))}
+                              >
+                                <i className={`fa-solid ${natureMuted[sound.id] ? 'fa-volume-xmark' : 'fa-volume-high'}`}></i>
+                              </button>
+                            </div>
+                            <input 
+                              type="range" 
+                              className="mixer-slider"
+                              min="0"
+                              max="100"
+                              disabled={natureMuted[sound.id]}
+                              value={natureVolume[sound.id]}
+                              onChange={(e) => setNatureVolume(prev => ({ ...prev, [sound.id]: parseInt(e.target.value) }))}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="nature-quote-block">
+                      <span className="quote">{natureData.quote}</span>
+                      <span className="author">— {natureData.author}</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* E. MUSIC EXPANDED */}
+            {activeModal === 'modal-music' && (
+              <section className="modal-section">
+                <div className="modal-grid-layout music-expanded">
+                  <div className="modal-left-col glass-panel flex-column justify-between">
+                    <div>
+                      <h2 className="modal-section-title">THE ACOUSTIC LOUNGE</h2>
+                      <p className="modal-section-subtitle">// SINGING IS MY ESCAPE</p>
+                      <p className="section-desc">Music provides an anchor to the emotional self. As a singer, I use voice control, resonance, and acoustic soundscapes to escape logical systems and channel creative vibration.</p>
+                    </div>
+
+                    <div className="vinyl-controller-widget">
+                      <div className="track-info">
+                        <span className="track-title">{musicData.trackTitle}</span>
+                        <span className="track-artist">{musicData.trackArtist}</span>
+                      </div>
+                      <div className="player-progress-bar">
+                        <div className="progress-filled" style={{ width: `${musicProgress}%` }}></div>
+                      </div>
+                      <div className="player-buttons">
+                        <button className="play-control-btn"><i className="fa-solid fa-backward-step"></i></button>
+                        <button 
+                          className="play-control-btn play-main-btn"
+                          onClick={() => setIsMusicPlaying(!isMusicPlaying)}
+                        >
+                          <i className={`fa-solid ${isMusicPlaying ? 'fa-pause' : 'fa-play'}`}></i>
+                        </button>
+                        <button className="play-control-btn"><i className="fa-solid fa-forward-step"></i></button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="modal-right-col glass-panel visualizer-layout">
+                    <div className="vinyl-player-turntable">
+                      <div className="turntable-platter">
+                        <div className={`platter-vinyl ${isMusicPlaying ? 'spinning' : ''}`}>
+                          <div className="vinyl-label-center"></div>
+                        </div>
+                        <div className={`tonearm ${isMusicPlaying ? 'active' : ''}`}></div>
+                      </div>
+                    </div>
+
+                    <div className="visualizer-container">
+                      <span className="vis-lbl">WAVEFORM SPECTRUM (SIMULATED)</span>
+                      <canvas ref={musicCanvasRef} className="waveform-canvas"></canvas>
+                    </div>
+
+                    <div className="lyrics-scroller" ref={lyricsScrollerRef}>
+                      {musicData.lyrics.map((line, i) => (
+                        <div 
+                          key={i} 
+                          className={`lyric-line ${activeLyricIndex === i ? 'active' : ''}`}
+                        >
+                          {line.text}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* F. FOOD INDUSTRY EXPANDED */}
+            {activeModal === 'modal-food' && (
+              <section className="modal-section">
+                <div className="modal-grid-layout food-expanded">
+                  <div className="modal-left-col glass-panel flex-column justify-between scrollable-y">
+                    <div>
+                      <h2 className="modal-section-title">GASTRO CULTURE</h2>
+                      <p className="modal-section-subtitle">// BRAND FUSIONS & FOOD DESIGN</p>
+                      <p className="section-desc">Food is the ultimate intersection of anthropology, creative plating, sensory pleasure, and hospitality. I look at food not just as culinary craft, but as a robust brand model ripe for technological automation and design.</p>
+                    </div>
+
+                    <div className="branding-mixer-widget">
+                      <h4>BRAND CONCEPTS MIXER</h4>
+                      <p className="breathing-desc">Select branding parameters to synthesize a gourmet food-tech venture concept.</p>
+                      
+                      <div className="mixer-buttons-list">
+                        {foodData.mixPills.map((pill) => (
+                          <button 
+                            key={pill.id} 
+                            className={`mix-pill ${selectedMixPills.includes(pill.id) ? 'selected' : ''}`}
+                            onClick={() => toggleMixPill(pill.id)}
+                          >
+                            {pill.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button className="synthesize-btn" onClick={handleMixSynthesize}>SYNTHESIZE VENTURE</button>
+                      
+                      {synthesizedConcept && (
+                        <div className="synthesis-result">
+                          <span className="res-lbl">// SYS SYNTHESIS OUT:</span>
+                          <p className="res-text">{synthesizedConcept}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div 
+                    className="modal-right-col glass-panel flex-column food-brand-details" 
+                    style={{ 
+                      backgroundImage: `linear-gradient(180deg, rgba(8,8,12,0.85) 0%, rgba(8,8,12,0.98) 100%), url('/food_luxury.png')`,
+                      backgroundSize: 'cover', 
+                      backgroundPosition: 'center' 
+                    }}
+                  >
+                    <div className="brand-showcase-panel">
+                      <span className="tag-gold">// THE BRAND MANUAL</span>
+                      <h3>CULINIQUE CONCEPT</h3>
+                      <p className="brand-long-desc">{foodData.longDescription}</p>
+                      
+                      <div className="brand-pillars">
+                        {foodData.pillars.map((pillar) => (
+                          <div className="pillar-card" key={pillar.id}>
+                            <h5>{pillar.id} / {pillar.title}</h5>
+                            <p>{pillar.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="culinary-gallery-slide">
+                      <span className="gallery-title">// VIBE BOARD</span>
+                      <div className="vibe-carousel">
+                        <img src="/food_luxury.png" alt="Chef food luxury visual design" className="vibe-img" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* G. ENTREPRENEUR MINDSET EXPANDED */}
+            {activeModal === 'modal-mindset' && (
+              <section className="modal-section">
+                <div className="modal-grid-layout mindset-expanded">
+                  <div className="modal-left-col glass-panel flex-column justify-between scrollable-y">
+                    <div>
+                      <h2 className="modal-section-title">THE CAPTAINS BRIDGE</h2>
+                      <p className="modal-section-subtitle">// GROWING WEALTH THROUGH CREATION</p>
+                      <p className="section-desc">Obsessed with execution. True leverage lies in building products that scale, assembling automated networks, and maintaining extreme mental discipline. I design companies, track asset lines, and optimize execution algorithms.</p>
+                    </div>
+
+                    <div className="financials-canvas-wrapper">
+                      <div className="canvas-chart-header">
+                        <span>SIMULATED SYSTEM TRACTION</span>
+                        <span className="curr-val">
+                          {hoveredChartPoint ? `${hoveredChartPoint.label}: ${hoveredChartPoint.value}` : "Hover node for metric"}
+                        </span>
+                      </div>
+                      
+                      <div style={{ position: 'relative' }}>
+                        <canvas 
+                          ref={growthCanvasRef} 
+                          className="growth-canvas"
+                          onMouseMove={handleValuationsMouseMove}
+                          onMouseLeave={() => setHoveredChartPoint(null)}
+                        ></canvas>
+                        
+                        {hoveredChartPoint && (
+                          <div 
+                            className="valuation-point-tooltip"
+                            style={{ 
+                              position: 'absolute',
+                              left: `${chartTooltipPos.x}px`,
+                              top: `${chartTooltipPos.y}px`
+                            }}
+                          >
+                            <strong>{hoveredChartPoint.label}</strong>
+                            <div>{hoveredChartPoint.value}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="modal-right-col glass-panel flex-column mindset-right scrollable-y">
+                    <h3>THE MATRIX OF IDEAS</h3>
+                    <p className="mindmap-desc">Click key nodes in Giridhar's entrepreneurial mental network to project their metrics.</p>
+                    
+                    <div className="svg-mindmap-wrapper">
+                      <svg viewBox="0 0 400 240" className="mindmap-svg">
+                        {/* Connector paths */}
+                        <line x1="200" y1="120" x2="100" y2="60" stroke="#dfb15b" strokeWidth="1.5" className="line-animate"/>
+                        <line x1="200" y1="120" x2="300" y2="60" stroke="#dfb15b" strokeWidth="1.5" className="line-animate"/>
+                        <line x1="200" y1="120" x2="100" y2="180" stroke="#dfb15b" strokeWidth="1.5" className="line-animate"/>
+                        <line x1="200" y1="120" x2="300" y2="180" stroke="#dfb15b" strokeWidth="1.5" className="line-animate"/>
+                        
+                        {/* Central Hub Node */}
+                        <g className="mind-node root">
+                          <circle cx="200" cy="120" r="18" fill="#121218" stroke="#dfb15b" strokeWidth="2"/>
+                          <text x="200" y="124" textAnchor="middle" fill="#dfb15b" fontSize="8" fontFamily="Outfit">CORE</text>
+                        </g>
+
+                        {/* Mind Leaf Nodes */}
+                        {entrepreneurData.mindmapNodes.map((node) => (
+                          <g 
+                            key={node.id} 
+                            className="mind-node leaf"
+                            onClick={() => setSelectedMindNode(node)}
+                          >
+                            <circle cx={node.cx} cy={node.cy} r="14" fill="#121218" stroke={node.color} strokeWidth="1.5"/>
+                            <text x={node.cx} y={node.cy + 3} textAnchor="middle" fill="#f4f4f7" fontSize="7" fontFamily="Outfit">{node.text}</text>
+                          </g>
+                        ))}
+                      </svg>
+                      
+                      <div className="node-explanation-card">
+                        <span className="exp-title">
+                          {selectedMindNode ? `// SELECTED PILLAR: ${selectedMindNode.text}` : "// SELECTED PILLAR SYSTEM"}
+                        </span>
+                        <p className="exp-body">
+                          {selectedMindNode ? selectedMindNode.details : "Select a node above to inspect its entrepreneurial alignment metrics."}
                         </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
 
-        {activeCard === 'nature' && (
-          <div className="interactive-card glass-panel" style={{ '--accent-color': 'var(--color-amber)' }}>
-            <div className="card-header">
-              <div className="card-title-group">
-                <div className="card-icon-wrapper"><MountainIcon /></div>
-                <div>
-                  <h2 className="card-title">Zen Nature Garden</h2>
-                  <p className="card-subtitle">Wind Chimes & Sound Synthesis</p>
-                </div>
-              </div>
-              <button 
-                type="button"
-                className="card-close-btn" 
-                onClick={() => { playSoundEffect(); setActiveCard(null); }}
-                aria-label="Close panel"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            
-            <div className="card-content">
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginBottom: '16px', lineHeight: '1.5' }}>
-                Harness the Web Audio API synthesizer. Adjust wind intensity to modulate real-time synthesized LFO white noise, or stroke the wind chimes to swing them and sound a melodic pentatonic scale.
-              </p>
-              
-              <div className="nature-slider-box">
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                  <span>Wind Intensity: {windSpeed}%</span>
-                  <span style={{ color: 'var(--color-amber)' }}>{windSpeed > 60 ? 'Howling Storm' : windSpeed > 25 ? 'Fresh Breeze' : 'Calm Whisper'}</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value={windSpeed} 
-                  onChange={handleWindSlider}
-                  className="custom-range-slider"
-                  aria-label="Wind Intensity"
-                />
-                
-                {/* Visual physics-based wind-chime simulator */}
-                <div className="wind-chimes-frame">
-                  {chimeAngles.map((angle, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      className="wind-chime-string"
-                      onClick={() => triggerChime(idx)}
-                      style={{ 
-                        height: `${100 + idx * 15}px`,
-                        transform: `rotate(${angle}deg)`
-                      }}
-                      title={`Stroke Wind Chime ${idx + 1}`}
-                      aria-label={`Wind chime ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeCard === 'music' && (
-          <div className="interactive-card glass-panel" style={{ '--accent-color': 'var(--color-purple)' }}>
-            <div className="card-header">
-              <div className="card-title-group">
-                <div className="card-icon-wrapper"><MusicIcon /></div>
-                <div>
-                  <h2 className="card-title">Music Wave Mixer</h2>
-                  <p className="card-subtitle">Acoustic Covers & Math Waves</p>
-                </div>
-              </div>
-              <button 
-                type="button"
-                className="card-close-btn" 
-                onClick={() => { playSoundEffect(); setActiveCard(null); }}
-                aria-label="Close panel"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            
-            <div className="card-content">
-              <div className="music-player-panel">
-                <div style={{ textAlign: 'center' }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: 'bold' }}>Golden Hour (Acoustic Cover)</h3>
-                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '2px', textTransform: 'uppercase' }}>Giridhar U • Vocals & Guitar</p>
-                </div>
-                
-                {/* Waveform mixer canvas */}
-                <canvas ref={waveCanvasRef} className="music-visualizer-canvas" width="600" height="80" />
-                
-                <div className="player-controls">
-                  <button type="button" className="player-btn" onClick={() => playSoundEffect()} aria-label="Previous Track">
-                    <ChevronLeft size={20} />
-                  </button>
-                  <button 
-                    type="button"
-                    className="player-btn play-pause" 
-                    onClick={() => {
-                      playSoundEffect();
-                      setIsPlayingSong(p => !p);
-                    }}
-                    aria-label={isPlayingSong ? "Pause Track" : "Play Track"}
-                  >
-                    {isPlayingSong ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" style={{ marginLeft: '4px' }} />}
-                  </button>
-                  <button type="button" className="player-btn" onClick={() => playSoundEffect()} aria-label="Next Track">
-                    <ChevronRight size={20} />
-                  </button>
-                </div>
-                
-                {/* Dynamic player timeline slider */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
-                  <span>0:45</span>
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="100" 
-                    value={songProgress} 
-                    onChange={(e) => setSongProgress(parseInt(e.target.value))}
-                    className="custom-range-slider"
-                    style={{ flex: 1 }}
-                    aria-label="Song progress"
-                  />
-                  <span>3:12</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeCard === 'food' && (
-          <div className="interactive-card glass-panel" style={{ '--accent-color': 'var(--color-amber)' }}>
-            <div className="card-header">
-              <div className="card-title-group">
-                <div className="card-icon-wrapper"><FoodIcon /></div>
-                <div>
-                  <h2 className="card-title">Gastronomy Flavor Planner</h2>
-                  <p className="card-subtitle">Radar Plate Profile Builder</p>
-                </div>
-              </div>
-              <button 
-                type="button"
-                className="card-close-btn" 
-                onClick={() => { playSoundEffect(); setActiveCard(null); }}
-                aria-label="Close panel"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            
-            <div className="card-content">
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginBottom: '20px', lineHeight: '1.5' }}>
-                Balance flavor profiles in real-time. Slide the taste variables to update our interactive digital platter aura and craft suggested signature gourmet creations.
-              </p>
-              
-              <div className="culinary-row">
-                <div className="flavor-sliders">
-                  {Object.keys(tasteProfile).map(taste => (
-                    <div className="flavor-slider-item" key={taste}>
-                      <div className="flavor-slider-label">
-                        <span>{taste}</span>
-                        <span style={{ color: 'var(--color-amber)', fontWeight: 'bold' }}>{tasteProfile[taste]}%</span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="100" 
-                        value={tasteProfile[taste]} 
-                        onChange={(e) => {
-                          setTasteProfile(prev => ({ ...prev, [taste]: parseInt(e.target.value) }));
-                          if (audioActive && parseInt(e.target.value) % 5 === 0) {
-                            audioHelper.playChime(taste === 'spicy' ? 6 : taste === 'umami' ? 8 : 4);
-                          }
-                        }}
-                        className="custom-range-slider"
-                        aria-label={`${taste} level`}
-                      />
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="plate-canvas-display" style={{ 
-                  '--food-color': tasteProfile.spicy > 60 
-                    ? '#ef4444' 
-                    : tasteProfile.umami > 60 
-                    ? '#aa7c11' 
-                    : tasteProfile.sweet > 60 
-                    ? '#f472b6' 
-                    : '#10b981' 
-                }}>
-                  <div className="plate-circle">
-                    <div className="plate-food-aura" style={{ 
-                      transform: `scale(${0.5 + (tasteProfile.spicy + tasteProfile.umami + tasteProfile.sweet + tasteProfile.savory + tasteProfile.acid) / 500})`
-                    }} />
-                    <FoodIcon size={32} style={{ zIndex: 2, color: 'white', opacity: 0.8 }} />
-                  </div>
-                  
-                  {/* Dynamic chef suggestion */}
-                  <div>
-                    <h4 style={{ fontSize: '14px', color: 'var(--color-amber)', fontWeight: 'bold' }}>
-                      {getCulinaryRecommendation(tasteProfile.sweet, tasteProfile.savory, tasteProfile.spicy, tasteProfile.umami, tasteProfile.acid).name}
-                    </h4>
-                    <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', marginTop: '6px', lineHeight: '1.4' }}>
-                      {getCulinaryRecommendation(tasteProfile.sweet, tasteProfile.savory, tasteProfile.spicy, tasteProfile.umami, tasteProfile.acid).desc}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeCard === 'growth' && (
-          <div className="interactive-card glass-panel" style={{ '--accent-color': 'var(--color-emerald)' }}>
-            <div className="card-header">
-              <div className="card-title-group">
-                <div className="card-icon-wrapper"><GrowthIcon /></div>
-                <div>
-                  <h2 className="card-title">Wealth Compound Projection</h2>
-                  <p className="card-subtitle">Project Compounding Wealth</p>
-                </div>
-              </div>
-              <button 
-                type="button"
-                className="card-close-btn" 
-                onClick={() => { playSoundEffect(); setActiveCard(null); }}
-                aria-label="Close panel"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            
-            <div className="card-content">
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginBottom: '20px', lineHeight: '1.5' }}>
-                Calculate long-term compounding projection. Slide the inputs to render a glowing SVG compound curve and see projected returns.
-              </p>
-              
-              <div className="growth-grid">
-                <div className="growth-sliders">
-                  <div className="flavor-slider-item">
-                    <div className="flavor-slider-label">
-                      <span>Monthly Invest</span>
-                      <span style={{ color: 'var(--color-emerald)', fontWeight: 'bold' }}>${monthlyInvest}</span>
-                    </div>
-                    <input 
-                      type="range" 
-                      min="50" 
-                      max="2000" 
-                      step="50"
-                      value={monthlyInvest} 
-                      onChange={(e) => setMonthlyInvest(parseInt(e.target.value))}
-                      className="custom-range-slider"
-                      aria-label="Monthly investment"
-                    />
-                  </div>
-                  
-                  <div className="flavor-slider-item">
-                    <div className="flavor-slider-label">
-                      <span>Annual Return</span>
-                      <span style={{ color: 'var(--color-emerald)', fontWeight: 'bold' }}>{returnRate}%</span>
-                    </div>
-                    <input 
-                      type="range" 
-                      min="4" 
-                      max="25" 
-                      value={returnRate} 
-                      onChange={(e) => setReturnRate(parseInt(e.target.value))}
-                      className="custom-range-slider"
-                      aria-label="Annual return rate"
-                    />
-                  </div>
-                  
-                  <div className="flavor-slider-item">
-                    <div className="flavor-slider-label">
-                      <span>Duration Period</span>
-                      <span style={{ color: 'var(--color-emerald)', fontWeight: 'bold' }}>{compoundYears} Years</span>
-                    </div>
-                    <input 
-                      type="range" 
-                      min="5" 
-                      max="40" 
-                      value={compoundYears} 
-                      onChange={(e) => setCompoundYears(parseInt(e.target.value))}
-                      className="custom-range-slider"
-                      aria-label="Compound years"
-                    />
-                  </div>
-                </div>
-                
-                <div className="growth-chart-box">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>
-                    <span>Compounded Wealth</span>
-                    <span>{compoundYears} Yrs</span>
-                  </div>
-                  
-                  {/* Glowing Compound SVG Line Chart */}
-                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ height: '110px', width: '100%', margin: '10px 0' }}>
-                    <defs>
-                      <linearGradient id="chart-gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--color-emerald)" stopOpacity="0.45" />
-                        <stop offset="100%" stopColor="var(--color-emerald)" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-                    <path d={compoundPaths.areaPath} className="svg-chart-fill" />
-                    <path d={compoundPaths.linePath} className="svg-chart-path" />
-                  </svg>
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '10px' }}>
-                    <div>
-                      <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Total Invested</p>
-                      <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'white' }}>${getCompoundInvestedVal().toLocaleString()}</p>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Projected Wealth</p>
-                      <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>${getCompoundProjectedVal().toLocaleString()}</p>
+                    <div className="mindset-milestones">
+                      <h4>AMBITION ROADMAP</h4>
+                      {entrepreneurData.roadmap.map((m, i) => (
+                        <div className="milestone-row" key={i}>
+                          <span className="m-title">{m.title}</span>
+                          <div className="m-status">
+                            <span className={`badge ${m.type}`}>{m.status}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </section>
+            )}
+
           </div>
-        )}
-
-        {activeCard === 'journey' && (
-          <div className="interactive-card glass-panel" style={{ '--accent-color': 'var(--color-blue)' }}>
-            <div className="card-header">
-              <div className="card-title-group">
-                <div className="card-icon-wrapper"><JourneyIcon /></div>
-                <div>
-                  <h2 className="card-title">My Documented Story</h2>
-                  <p className="card-subtitle">Interactive Career Timeline</p>
-                </div>
-              </div>
-              <button 
-                type="button"
-                className="card-close-btn" 
-                onClick={() => { playSoundEffect(); setActiveCard(null); }}
-                aria-label="Close panel"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            
-            <div className="card-content">
-              {/* Interactive Timeline Track */}
-              <div className="timeline-track">
-                {Object.keys(TIMELINE_DATA).map(year => (
-                  <button
-                    key={year}
-                    type="button"
-                    className={`timeline-node-btn ${selectedTimelineYear === parseInt(year) ? 'active' : ''}`}
-                    onClick={() => {
-                      playSoundEffect();
-                      setSelectedTimelineYear(parseInt(year));
-                    }}
-                    aria-label={`Timeline year ${year}`}
-                  >
-                    {year}
-                  </button>
-                ))}
-              </div>
-              
-              {/* Detailed Timeline Era Card */}
-              <div className="timeline-content-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white' }}>{TIMELINE_DATA[selectedTimelineYear].title}</h3>
-                  <span style={{ fontSize: '12px', color: 'var(--color-blue)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>{selectedTimelineYear}</span>
-                </div>
-                <p style={{ fontSize: '11px', color: 'var(--color-gold)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px', fontWeight: '600' }}>
-                  {TIMELINE_DATA[selectedTimelineYear].subtitle}
-                </p>
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginTop: '12px', lineHeight: '1.6' }}>
-                  {TIMELINE_DATA[selectedTimelineYear].desc}
-                </p>
-                
-                <div style={{ marginTop: '16px', background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)', padding: '12px 16px', borderRadius: '8px' }}>
-                  <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Key Milestone</p>
-                  <p style={{ fontSize: '12px', color: 'white', marginTop: '2px', fontWeight: '600' }}>{TIMELINE_DATA[selectedTimelineYear].achievement}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* FOOTER WIDGETS & POP-UPS */}
-      <footer className="footer-bar">
-        {/* Left widget: LeetCode Streak */}
-        <div style={{ position: 'relative' }}>
-          <button 
-            type="button"
-            className="footer-widget glass-panel leetcode-widget" 
-            onClick={() => {
-              playSoundEffect();
-              setActiveWidget(activeWidget === 'leetcode' ? null : 'leetcode');
-            }}
-            style={{ border: 'none', background: 'none' }}
-          >
-            <div className="widget-left"><Flame size={16} fill="currentColor" /></div>
-            <div className="widget-text">
-              <span className="widget-title">LeetCode Streak</span>
-              <span className="widget-value">{habitStreak} Days</span>
-            </div>
-          </button>
-
-          {activeWidget === 'leetcode' && (
-            <div className="popover-widget-card left-side">
-              <div className="popover-header">
-                <span className="popover-title">Streak Verified</span>
-                <button type="button" style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }} onClick={() => setActiveWidget(null)} aria-label="Close widget">
-                  <X size={12} />
-                </button>
-              </div>
-              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4' }}>
-                My problem solving engine is fully active! 112 consecutive days of grinding algorithms and data structures on Leetcode.
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: '12px', fontSize: '11px', color: '#ff9900', fontWeight: '600' }}>
-                <Sparkles size={12} />
-                <span>Top 4.2% of global coders</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right widget: Daily Focus & Checklist */}
-        <div style={{ position: 'relative' }}>
-          <button 
-            type="button"
-            className="footer-widget glass-panel focus-widget" 
-            onClick={() => {
-              playSoundEffect();
-              setActiveWidget(activeWidget === 'focus' ? null : 'focus');
-            }}
-            style={{ border: 'none', background: 'none' }}
-          >
-            <div className="widget-left"><Target size={16} /></div>
-            <div className="widget-text">
-              <span className="widget-title">Current Focus</span>
-              <span className="widget-value">Become 1% Better</span>
-            </div>
-          </button>
-
-          {activeWidget === 'focus' && (
-            <div className="popover-widget-card right-side">
-              <div className="popover-header">
-                <span className="popover-title">Daily Habit Engine</span>
-                <button type="button" style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }} onClick={() => setActiveWidget(null)} aria-label="Close widget">
-                  <X size={12} />
-                </button>
-              </div>
-              <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Check off habits to compound your streak!</p>
-              
-              <div className="habit-checklist">
-                <button 
-                  type="button"
-                  className={`habit-item ${checkedHabits.code ? 'completed' : ''}`}
-                  onClick={() => toggleHabit('code')}
-                  style={{ background: 'none', border: 'none', textDecoration: 'none' }}
-                >
-                  <div className="habit-checkbox">{checkedHabits.code && <Check size={10} />}</div>
-                  <span>LeetCode daily practice</span>
-                </button>
-                <button 
-                  type="button"
-                  className={`habit-item ${checkedHabits.read ? 'completed' : ''}`}
-                  onClick={() => toggleHabit('read')}
-                  style={{ background: 'none', border: 'none', textDecoration: 'none' }}
-                >
-                  <div className="habit-checkbox">{checkedHabits.read && <Check size={10} />}</div>
-                  <span>Read 10 pages self dev</span>
-                </button>
-                <button 
-                  type="button"
-                  className={`habit-item ${checkedHabits.meditate ? 'completed' : ''}`}
-                  onClick={() => toggleHabit('meditate')}
-                  style={{ background: 'none', border: 'none', textDecoration: 'none' }}
-                >
-                  <div className="habit-checkbox">{checkedHabits.meditate && <Check size={10} />}</div>
-                  <span>10 mins Zen meditation</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </footer>
-
+        </main>
+      )}
     </div>
   );
 }
-
-export default App;
